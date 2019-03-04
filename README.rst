@@ -14,7 +14,13 @@ Discovery Consent Cordapp by the Nuts foundation for distributing Consent record
 
 .. inclusion-marker-for-contribution
 
-Configuration
-=============
+Setup
+#####
+
+You'll need the sphinx jsson-schema plugin for generating the documentation:
+
+.. sourcecode:: shell
+
+    pip install sphinx-jsonschema
 
 todo

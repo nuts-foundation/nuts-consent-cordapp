@@ -1,0 +1,47 @@
+{
+  "$schema": "http://nuts.nl/schemas/cordapp-consent#",
+
+  "type": "object",
+  "description":"meta.json root",
+
+  "properties": {
+    "domain": {
+      "type": "array",
+      "description": "from domain code-system",
+      "items": { "type": "string", "enum": ["medical", "pgo", "insurance"]}
+    },
+    "secure_key": {
+      "type": "object",
+      "properties": {
+        "alg": { "type": "string", "description": "Symmetric encryption algorithm (eg 'AES_GCM_256')"},
+        "iv": { "type": "string", "description": "Base64 encoded initialisation vector" }
+      }
+    },
+    "organisation_secure_keys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "$id": "a",
+        "description": "list of encrypted symmetric keys. Uses the organisation public key to encrypt",
+        "properties": {
+          "organisation_id": {"type": "string", "description": "URI representing the id of the organisation according to Nuts naming schemes"},
+          "alg" : {"type": "string", "description": "Asymmetric encryption algorithm (eg 'RSA_3k')"},
+          "cipher_text": {"type": "string", "description": "Base64 encoded cipher text representing the symmetric key"},
+        }
+      }
+    },
+    "previous_attachment_id": {
+      "type": "string",
+      "description" : "Refers to the previous version of the encrypted consent record. Can be used to recreate history."
+    },
+    "period" : {
+      "type": "object",
+      "description": "indicates the validity period of the encrypted consent record. The period must be the same as the encrypted one. This data can be used to 'garbage collect' attachments and keep the transactions as small as possible",
+      "properties": {
+        "valid_from": {"type": "date", "description": "Inclusive start date"},
+        "valid_tol": {"type": "date", "description": "Exclusive end date"}
+      }
+    }
+  },
+  "required": ["domain"]
+}
