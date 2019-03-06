@@ -17,13 +17,13 @@ This is the only mechanism to prevent duplicate entries and therefore must use s
 
 .. important::
 
-    The Nuts Corda Consent model represents :ref:`Triples <nuts-consent-cordapp-triple>`:
+    The Nuts Corda Consent model represents :ref:`DPC records <nuts-consent-cordapp-dpc>`:
         * The care provider responsible for storing the data (the custodian)
         * The patient (the subject)
         * The care provider that is granted access (the actor)
 
 Together with states Nuts also stores attachments. The attachments hold the actual data and are encrypted with a symmetric key.
-The symmetric key can only be accessed by the organisations that are involved in the *triple*.
+The symmetric key can only be accessed by the organisations that are involved in a *DPC* record.
 To ensure privacy, the symmetric key is encrypted with the public key of the involved organisations.
 
 .. note::
@@ -47,7 +47,7 @@ Flows
 
 `Flows <https://docs.corda.net/key-concepts-flows.html>`_ are the main pieces of logic to create or update states.
 They are basically a step-by-step description on information gathering, sending data to other parties and finalising the transaction.
-Flows are distinguished in to sending and receiving flows and can contain any number of sub-flows. The sub-flows allow for reuse of functionality.
+Flows are distinguished into sending and receiving flows and can contain any number of sub-flows. The sub-flows allow for reuse of functionality.
 The current supported flows can be found in the :ref:`nuts-consent-cordapp-flows` chapter.
 
 Transactions

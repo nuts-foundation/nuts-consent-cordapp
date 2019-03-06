@@ -44,18 +44,20 @@ metadata.json schema
 Attachment lifecycle
 --------------------
 
-Attachments are immutable but the data they contain is not. The underlying model can be updated or even additional consent records can be created for the same *Triple* which can be valid at the same time. This problem can be solved by using multiple attachments per *Triple*
+Attachments are immutable but the data they contain is not.
+The underlying model can be updated or even additional consent records can be created for the same *DPC* record which can be valid at the same time.
+This problem can be solved by using multiple attachments per *DPC* record.
 
 .. note::
 
-    The *Triple* (Custodian, Subject, Actor) is unique but multiple consent records can be active at the same time.
-    For example a patient can allow access the hospital to access the involved care providers list present at a home care organisation.
+    A *DPC* record (Custodian, Subject, Actor) is unique but multiple consent records can be active at the same time.
+    For example a patient can allow the hospital to access the involved care providers list present at a home care organisation.
     At some point in time the patient might be taken into the hospital for some treatment. Next to the list of care providers, the patient might want to allow the hospital to access the medical records at the home care organisation, but only temporary.
     An additional consent record will have to be present, which is only valid for a certain time, next to the 'base' consent record.
 
 Only two actions are possible for consent records: *create* and *update*. A deletion is, in essence, just an update where the end date will be set to a certain point in time.
 For auditing reasons the entire history must be kept as well. When a consent record gets updated, two new attachments are created for that transaction: the old consent record but now updated with an end date.
-The underlying FHIR model will keeps its ID and version number, and a new consent record with valid from today.
+The underlying FHIR model will keep its ID and version number, and a new consent record valid from today onwards.
 This underlying FHIR model for this new record will have the same ID but with an increased version number.
 The updated record will also point towards the previous attachment so any party can view the history of the record.
 
@@ -63,12 +65,12 @@ Additional parties
 ------------------
 
 It is possible that a single care provider or organisation is using multiple pieces of software.
-Something which is common if a organisation adopts the best-of-breed approach in software selection.
-In that case you don't want to register additional consent. The way Nuts deals with this, is that a care organisation will have an unique set of keys which can be exported and uploaded to *Nuts service space*. When a new care organisation is registered for a Nuts node in the *Nuts registry* other nodes can act on this event.
+Something which is common if an organisation adopts the best-of-breed approach in software selection.
+In that case you don't want to register additional consent. The way Nuts deals with this, is that a care organisation will have a unique set of keys which can be exported and uploaded to *Nuts service space*. When a new care organisation is registered for a Nuts node in the *Nuts registry* other nodes can act on this event.
 If another node identifies the care organisation as a party that is registered at that node, it can pro-actively add the new Nuts node as a party to the existing consent records.
-This is possible due to the fact that the organisation has its own key pair. The same mechanism can be used for migration purposes as well.
+The same mechanism can be used for migration purposes as well.
 
-Fro the consent cordapp this process is an update of the state but without any attachments changing or added/removed.
+For the consent cordapp this process is an update of the state but without any attachments changing or added/removed.
 Only an involved party is added and all parties sign the transaction. All checks by the contract and any oracles still needs to be done by all involved parties.
 
 
@@ -78,7 +80,7 @@ Filtered transactions
 Corda supports a concept called 'transaction tear-off' or 'filtered transactions'. This allows flows to hide certain data for certain parties.
 The transaction is still valid because the signing of the transaction by all the parties is done by signing a hash of the actual data.
 This allows parties to see and sign a hash without seeing the data.
-The entire transaction is constructed as a `Merkle tree <https://en.wikipedia.org/wiki/Merkle_tree>_`, where parts can be substituted by their hash.
+The entire transaction is constructed as a `Merkle tree <https://en.wikipedia.org/wiki/Merkle_tree>`_, where parts can be substituted by their hash.
 
 This concept is used by Nuts to hide the BSN (Dutch national number) from PGO's (Personal health environment) and still allow the PGO to be part of the transaction.
 

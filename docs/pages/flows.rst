@@ -3,7 +3,15 @@
 Supported flows
 ###############
 
-.. todo:
+.. contents:: Flows:
+    :depth: 1
+    :local:
 
-    list of flows in this release
 
+Add Consent
+-----------
+New
+
+Update Consent
+--------------
+Also for delete
