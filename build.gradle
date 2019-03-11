@@ -20,7 +20,7 @@
 buildscript {
     ext {
         kotlinVersion = '1.2.71'
-        corda = '4.0-SNAPSHOT'
+        corda = '4.0'
         cordaGradlePluginsVersion = '4.0.25'
     }
 
