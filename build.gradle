@@ -45,6 +45,9 @@ repositories {
     mavenLocal()
     mavenCentral()
     jcenter()
+    maven {
+        url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/"
+    }
 }
 
 // exclude unneeded libs
