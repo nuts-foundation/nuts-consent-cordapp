@@ -37,7 +37,7 @@ import nl.nuts.consent.contract.PartyAttachmentSignature
  * @param parties involved parties
  */
 data class ConsentRequestState(val consentStateExternalId: String,
-                               val attachments: List<SecureHash>,
+                               val attachments: Set<SecureHash>,
                                val signatures: List<PartyAttachmentSignature>,
                                val parties: List<Party> = ArrayList()) : LinearState {
 

@@ -79,7 +79,6 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "There must at least be 1 attachment" using (attachments.isNotEmpty())
-                    "Attachments are unique" using (attachments.toSet().size == attachments.size)
                 }
             }
         }
@@ -96,9 +95,8 @@ class ConsentContract : Contract {
             fun verifyAttachmentsWithState(tx: LedgerTransaction, state: ConsentRequestState) {
                 val txAttachments = tx.attachments.filter { it !is ContractAttachment }
 
-                "All attachments are unique" using (state.attachments.size == state.attachments.toSet().size)
                 "Attachments in state have the same amount as include in the transaction" using (state.attachments.size == txAttachments.size)
-                "All attachments in state are include in the transaction" using (arrayOf(state.attachments) contentEquals arrayOf(txAttachments.map{it.id}))
+                "All attachments in state are include in the transaction" using (arrayOf(state.attachments.toList()) contentEquals arrayOf(txAttachments.map{it.id}))
 
                 "All attachment signatures are unique" using (state.signatures.size == state.signatures.toSet().size)
                 "All signatures belong to signing parties" using (state.participants.containsAll(state.signatures.map{it.party}))
@@ -122,7 +120,7 @@ class ConsentContract : Contract {
                     val out = tx.outputsOfType<ConsentRequestState>().first()
 
                     "Attachments in state have the same amount as included in the transaction" using (out.attachments.size == txAttachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(out.attachments) contentEquals arrayOf(txAttachments.map{it.id}))
+                    "All attachments in state are include in the transaction" using (arrayOf(out.attachments.toList()) contentEquals arrayOf(txAttachments.map{it.id}))
                 }
             }
         }
@@ -175,10 +173,6 @@ class ConsentContract : Contract {
                 requireThat {
                     // check if the right amount of attachments are present, given that no duplicate may exist, this is enough
                     "All signatures are present" using (inState.signatures.size == inState.participants.size * inState.attachments.size)
-
-                    // check if unreachable?
-                    "The set of attachment signature parties and signing parties are the same" using (inState.participants.toSet() == inState.signatures.map{it.party}.toSet())
-                    "The set of attachment signature hashes and attachment hashes are the same" using (inState.attachments.toSet() == inState.signatures.map{it.attachmentHash}.toSet())
                 }
             }
         }

@@ -25,14 +25,14 @@ import kotlin.test.assertEquals
 class ConsentRequestStateTest {
     @Test
     fun `linear id of ConsentRequestState is its externalID appended with REQ`() {
-        val state = ConsentRequestState("uuid", emptyList(), emptyList(), emptyList())
+        val state = ConsentRequestState("uuid", emptySet(), emptyList(), emptyList())
 
         assertEquals("uuid_REQ", state.linearId.externalId)
     }
 
     @Test
     fun `string representation of ConsentRequestState is its externalID appended with REQ`() {
-        val state = ConsentRequestState("uuid", emptyList(), emptyList(), emptyList())
+        val state = ConsentRequestState("uuid", emptySet(), emptyList(), emptyList())
 
         assertEquals("uuid_REQ", state.toString())
     }
