@@ -20,6 +20,7 @@
 package nl.nuts.consent.contract
 
 import net.corda.core.contracts.*
+import net.corda.core.contracts.Requirements.using
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
 import nl.nuts.consent.state.ConsentRequestState
@@ -51,18 +52,56 @@ class ConsentContract : Contract {
          */
         open class GenericRequest : ConsentCommands {
             override fun verifyStates(tx: LedgerTransaction) {
+                verifyInputState(tx)
+                verifyOutputState(tx)
+                verifyAttachments(tx)
+            }
+
+            open fun verifyInputState(tx: LedgerTransaction) {
+
+            }
+
+            open fun verifyOutputState(tx: LedgerTransaction) {
                 val command = tx.commands.requireSingleCommand<ConsentCommands>()
 
                 requireThat {
                     "The right amount of states are created" using (tx.outputs.size == 1)
+
                     val out = tx.outputsOfType<LinearState>().single()
+
                     "All participants are unique" using (out.participants.toSet().size == out.participants.size)
                     "All participants must be signers" using (command.signers.containsAll(out.participants.map { it.owningKey }))
+                }
+            }
 
+            open fun verifyAttachments(tx: LedgerTransaction) {
+                val command = tx.commands.requireSingleCommand<ConsentCommands>()
+
+                requireThat {
                     "The number of attachments must be at least 1" using (tx.attachments.size >= 1)
-
                     "All attachments must be signed by all participants" using (tx.attachments.all { it.signerKeys.containsAll(command.signers) })
                 }
+            }
+        }
+
+        /**
+         * Abstract class with ConsentRequestState as input
+         */
+        open class ProcessRequest : GenericRequest() {
+            override fun verifyInputState(tx: LedgerTransaction) {
+                "The right amount of states are consumed" using (tx.inputs.size == 1)
+                "Only ConsentRequestStates are consumed" using (tx.inputs.all { it.state.data is ConsentRequestState })
+            }
+
+            fun verifyAttachmentsWithState(tx: LedgerTransaction, state: ConsentRequestState) {
+                "All attachments are unique" using (state.attachments.size == state.attachments.toSet().size)
+                "Attachments in state have the same amount as include in the transaction" using (state.attachments.size == tx.attachments.size)
+                "All attachments in state are include in the transaction" using (arrayOf(state.attachments) contentEquals arrayOf(tx.attachments.map{it.id}))
+
+                "All attachment signatures are unique" using (state.signatures.size == state.signatures.toSet().size)
+                "All signatures belong to signing parties" using (state.participants.containsAll(state.signatures.map{it.party}))
+                "All signatures belong to attachments" using (state.attachments.containsAll(state.signatures.map{it.attachmentHash}))
+                "All signatures are valid" using (state.signatures.all{it.verify()})
             }
         }
 
@@ -85,29 +124,26 @@ class ConsentContract : Contract {
         }
 
         /**
-         * Command for a Party to signal that it verified the encrypted contentss
+         * Command for a Party to signal that it verified the encrypted contents
          */
-        class AcceptRequest : GenericRequest() {
-            override fun verifyStates(tx: LedgerTransaction) {
-                super.verifyStates(tx)
+        class AcceptRequest : ProcessRequest() {
+            override fun verifyOutputState(tx: LedgerTransaction) {
+                super.verifyOutputState(tx)
+
                 requireThat {
-                    "The right amount of states are consumed" using (tx.inputs.size == 1)
-                    "Only ConsentRequestStates are consumed" using (tx.inputs.all { it.state.data is ConsentRequestState })
-                    "The right amount of states are created" using (tx.outputs.size == 1)
                     "Only ConsentRequestStates are created" using (tx.outputs.all { it.data is ConsentRequestState })
+                }
+            }
 
-                    val inState = tx.inputsOfType<ConsentRequestState>().first()
-                    val out = tx.outputsOfType<ConsentRequestState>().first()
+            override fun verifyAttachments(tx: LedgerTransaction) {
+                super.verifyAttachments(tx)
 
-                    "All attachments are unique" using (out.attachments.size == out.attachments.toSet().size)
-                    "Attachments in state have the same amount as include in the transaction" using (out.attachments.size == tx.attachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(out.attachments) contentEquals arrayOf(tx.attachments.map{it.id}))
+                val inState = tx.inputsOfType<ConsentRequestState>().first()
+                val out = tx.outputsOfType<ConsentRequestState>().first()
 
-                    "All attachment signatures are unique" using (out.signatures.size == out.signatures.toSet().size)
-                    "All signatures belong to signing parties" using (out.participants.containsAll(out.signatures.map{it.party}))
-                    "All signatures belong to attachments" using (out.attachments.containsAll(out.signatures.map{it.attachmentHash}))
-                    "All signatures are valid" using (out.signatures.all{it.verify()})
+                verifyAttachmentsWithState(tx, out)
 
+                requireThat {
                     "Output state has [attachments] more signatures than input state" using (out.signatures.size - inState.signatures.size == out.attachments.size)
                 }
             }
@@ -116,29 +152,29 @@ class ConsentContract : Contract {
         /**
          * Command to finalize the request. All parties have done additional checks on the encrypted attachment data
          */
-        class FinalizeRequest : GenericRequest() {
-            override fun verifyStates(tx: LedgerTransaction) {
-                super.verifyStates(tx)
+        class FinalizeRequest : ProcessRequest() {
+            override fun verifyOutputState(tx: LedgerTransaction) {
+                super.verifyOutputState(tx)
+
                 requireThat {
-                    "The right amount of states are consumed" using (tx.inputs.size == 1)
-                    "Only ConsentRequestStates are consumed" using (tx.inputs.all { it.state.data is ConsentRequestState })
                     "Only ConsentStates are created" using (tx.outputs.all { it.data is ConsentState })
+                }
+            }
 
-                    val inState = tx.inputsOfType<ConsentRequestState>().first()
+            override fun verifyAttachments(tx: LedgerTransaction) {
+                super.verifyAttachments(tx)
 
-                    "All attachments are unique" using (inState.attachments.size == inState.attachments.toSet().size)
+                val inState = tx.inputsOfType<ConsentRequestState>().first()
 
-                    "Attachments in state have the same amount as include in the transaction" using (inState.attachments.size == tx.attachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(inState.attachments) contentEquals arrayOf(tx.attachments.map{it.id}))
+                verifyAttachmentsWithState(tx, inState)
 
-                    "All attachment signatures are unique" using (inState.signatures.size == inState.signatures.toSet().size)
+                requireThat {
+                    // check if the right amount of attachments are present, given that no duplicate may exist, this is enough
+                    "All signatures are present" using (inState.signatures.size == inState.participants.size * inState.attachments.size)
 
+                    // check if unreachable?
                     "The set of attachment signature parties and signing parties are the same" using (inState.participants.toSet() == inState.signatures.map{it.party}.toSet())
                     "The set of attachment signature hashes and attachment hashes are the same" using (inState.attachments.toSet() == inState.signatures.map{it.attachmentHash}.toSet())
-                    "All signatures are valid" using (inState.signatures.all{it.verify()})
-
-                    // parties * attachments
-                    "All signatures are present" using (inState.signatures.size == inState.participants.size * inState.attachments.size)
                 }
             }
         }

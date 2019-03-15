@@ -332,7 +332,7 @@ class ConsentContractTest {
                         listOf(homeCare.publicKey, generalCare.publicKey),
                         ConsentContract.ConsentCommands.FinalizeRequest()
                 )
-                `fails with`("The set of attachment signature parties and signing parties are the same")
+                `fails with`("All signatures are present")
             }
         }
     }
@@ -359,7 +359,7 @@ class ConsentContractTest {
                         listOf(homeCare.publicKey, generalCare.publicKey),
                         ConsentContract.ConsentCommands.FinalizeRequest()
                 )
-                `fails with`("The set of attachment signature hashes and attachment hashes are the same")
+                `fails with`("All signatures belong to attachments")
             }
         }
     }
@@ -441,6 +441,142 @@ class ConsentContractTest {
                         ConsentContract.ConsentCommands.AcceptRequest()
                 )
                 verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest only creates ConsentRequestStates`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                `fails with`("Only ConsentRequestStates are created")
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest requires more attachments on output than input`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                `fails with`("Output state has [attachments] more signatures than input state")
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest requires list of PartyAttachmentSignatures that match attachments`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createValidPAS(homeCare, SecureHash.allOnesHash)), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                `fails with`("All signatures belong to attachments")
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest requires unique set of PartyAttachmentSignatures`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createValidPAS(generalCare, attHash), createValidPAS(generalCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                `fails with`("All attachment signatures are unique")
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest requires valid set of PartyAttachmentSignatures`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createInValidPAS(homeCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                `fails with`("All signatures are valid")
             }
         }
     }
