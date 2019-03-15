@@ -34,6 +34,6 @@ class ConsentRequestStateTest {
     fun `string representation of ConsentRequestState is its externalID appended with REQ`() {
         val state = ConsentRequestState("uuid", emptyList(), emptyList(), emptyList())
 
-        assertEquals("uuid_REQ", state.linearId.externalId)
+        assertEquals("uuid_REQ", state.toString())
     }
 }
