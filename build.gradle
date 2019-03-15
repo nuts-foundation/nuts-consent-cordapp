@@ -82,7 +82,6 @@ allprojects {
     jacocoTestReport {
         reports {
             xml.enabled true
-            xml.destination file("${buildDir}/reports/jacoco/report.xml")
             html.enabled false
             csv.enabled false
         }
@@ -108,18 +107,4 @@ dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
 }
 
-// the plugin creates exec files when running the tests, this task creates a report out of those files
-
-task codeCoverageReport(type: JacocoReport) {
-//    subprojects.each {
-//        sourceSets it.sourceSets.main
-//    }
-    sourceSets sourceSets.main
-
-    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
-}
-
-//codeCoverageReport.dependsOn test
-//codeCoverageReport.dependsOn {
-//    subprojects*.test
-//}
+check.dependsOn jacocoTestReport
