@@ -78,7 +78,6 @@ class ConsentContract : Contract {
                 val command = tx.commands.requireSingleCommand<ConsentCommands>()
 
                 requireThat {
-                    "The number of attachments must be at least 1" using (tx.attachments.size >= 1)
                     "All attachments must be signed by all participants" using (tx.attachments.all { it.signerKeys.containsAll(command.signers) })
                 }
             }
@@ -117,6 +116,7 @@ class ConsentContract : Contract {
 
                     val out = tx.outputsOfType<ConsentRequestState>().first()
 
+                    "The number of attachments must be at least 1" using (out.attachments.isNotEmpty())
                     "Attachments in state have the same amount as include in the transaction" using (out.attachments.size == tx.attachments.size)
                     "All attachments in state are include in the transaction" using (arrayOf(out.attachments) contentEquals arrayOf(tx.attachments.map{it.id}))
                 }

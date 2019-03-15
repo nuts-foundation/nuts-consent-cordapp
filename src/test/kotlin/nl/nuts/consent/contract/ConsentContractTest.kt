@@ -63,6 +63,28 @@ class ConsentContractTest {
     }
 
     @Test
+    fun `createNewRequest transaction must have same set of attachments as output state`() {
+        ledgerServices.ledger {
+            transaction {
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", emptyList(), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.CreateRequest()
+                )
+                `fails with`("Attachments in state have the same amount as include in the transaction")
+            }
+        }
+    }
+
+    @Test
     fun `createNewRequest transaction must have unique set of participants`() {
         ledgerServices.ledger {
             transaction {
@@ -176,6 +198,28 @@ class ConsentContractTest {
                         ConsentContract.ConsentCommands.CreateRequest()
                 )
                 `fails with`("Only ConsentRequestStates are created")
+            }
+        }
+    }
+
+    @Test
+    fun `createNewRequest transaction must at least have 1 attachment`() {
+        ledgerServices.ledger {
+            transaction {
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", emptyList(), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.CreateRequest()
+                )
+                `fails with`("The number of attachments must be at least 1")
             }
         }
     }
@@ -441,6 +485,60 @@ class ConsentContractTest {
                         ConsentContract.ConsentCommands.AcceptRequest()
                 )
                 verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest transaction must have same set of attachments as output state`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", emptyList(),
+                                listOf(createValidPAS(homeCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                `fails with`("Attachments in state have the same amount as include in the transaction")
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest transaction must have unique set of attachments as output state`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash, attHash),
+                                listOf(createValidPAS(homeCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                `fails with`("All attachments are unique")
             }
         }
     }
