@@ -202,7 +202,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `valid transaction for accepted request`() {
+    fun `valid transaction for finalized request`() {
         ledgerServices.ledger {
             transaction {
                 input(
@@ -229,7 +229,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest only consumes ConsentRequestStates`() {
+    fun `FinalizeRequest only consumes ConsentRequestStates`() {
         ledgerServices.ledger {
             transaction {
                 input(
@@ -255,7 +255,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest only consumes a single ConsentRequestState`() {
+    fun `FinalizeRequest only consumes a single ConsentRequestState`() {
         ledgerServices.ledger {
             transaction {
                 input(
@@ -285,7 +285,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest only produces ConsentStates`() {
+    fun `FinalizeRequest only produces ConsentStates`() {
         ledgerServices.ledger {
             transaction {
                 input(
@@ -311,7 +311,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest requires complete list of PartyAttachmentSignatures`() {
+    fun `FinalizeRequest requires complete list of PartyAttachmentSignatures`() {
         ledgerServices.ledger {
             transaction {
                 input(
@@ -338,7 +338,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest requires list of PartyAttachmentSignatures that match attachments`() {
+    fun `FinalizeRequest requires list of PartyAttachmentSignatures that match attachments`() {
         ledgerServices.ledger {
             transaction {
                 input(
@@ -365,7 +365,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest requires unique set of PartyAttachmentSignatures`() {
+    fun `FinalizeRequest requires unique set of PartyAttachmentSignatures`() {
         ledgerServices.ledger {
             transaction {
                 input(
@@ -392,7 +392,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest requires valid set of PartyAttachmentSignatures`() {
+    fun `FinalizeRequest requires valid set of PartyAttachmentSignatures`() {
         ledgerServices.ledger {
             transaction {
                 input(
@@ -414,6 +414,33 @@ class ConsentContractTest {
                         ConsentContract.ConsentCommands.FinalizeRequest()
                 )
                 `fails with`("All signatures are valid")
+            }
+        }
+    }
+
+    @Test
+    fun `valid transaction for accept request`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createValidPAS(homeCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                verifies()
             }
         }
     }

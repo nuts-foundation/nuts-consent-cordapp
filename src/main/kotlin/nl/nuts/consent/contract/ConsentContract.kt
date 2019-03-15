@@ -96,6 +96,7 @@ class ConsentContract : Contract {
                     "The right amount of states are created" using (tx.outputs.size == 1)
                     "Only ConsentRequestStates are created" using (tx.outputs.all { it.data is ConsentRequestState })
 
+                    val inState = tx.inputsOfType<ConsentRequestState>().first()
                     val out = tx.outputsOfType<ConsentRequestState>().first()
 
                     "All attachments are unique" using (out.attachments.size == out.attachments.toSet().size)
@@ -106,6 +107,8 @@ class ConsentContract : Contract {
                     "All signatures belong to signing parties" using (out.participants.containsAll(out.signatures.map{it.party}))
                     "All signatures belong to attachments" using (out.attachments.containsAll(out.signatures.map{it.attachmentHash}))
                     "All signatures are valid" using (out.signatures.all{it.verify()})
+
+                    "Output state has [attachments] more signatures than input state" using (out.signatures.size - inState.signatures.size == out.attachments.size)
                 }
             }
         }
