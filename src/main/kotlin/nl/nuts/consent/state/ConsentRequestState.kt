@@ -44,5 +44,5 @@ data class ConsentRequestState(val consentStateExternalId: String,
     override val linearId: UniqueIdentifier get() = UniqueIdentifier("${consentStateExternalId}_REQ")
     override val participants: List<AbstractParty> get() = parties
 
-    override fun toString() = linearId.toString()
+    override fun toString() = linearId.externalId.toString()
 }
