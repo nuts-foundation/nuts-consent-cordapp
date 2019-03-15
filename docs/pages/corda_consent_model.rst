@@ -61,6 +61,15 @@ The underlying FHIR model will keep its ID and version number, and a new consent
 This underlying FHIR model for this new record will have the same ID but with an increased version number.
 The updated record will also point towards the previous attachment so any party can view the history of the record.
 
+Request/Accept state
+--------------------
+
+The creation or change of a *DPC* record is not a single transaction. Before a *DPC* record changes, a new *ConsentRequestState* needs to be created for the *DPC* record.
+The involved parties will listen to these new states and will validate the attachments that come with it.
+When the attachments are validated, a new transaction is started by the receiver to accept the new request and update the *DPC* record.
+
+.. note:: Only one *ConsentRequestState* can exist per *DPC* record at any given time.
+
 Additional parties
 ------------------
 
@@ -71,7 +80,7 @@ If another node identifies the care organisation as a party that is registered a
 The same mechanism can be used for migration purposes as well.
 
 For the consent cordapp this process is an update of the state but without any attachments changing or added/removed.
-Only an involved party is added and all parties sign the transaction. All checks by the contract and any oracles still needs to be done by all involved parties.
+Only an involved party is added and all parties sign the transaction. All checks still need to be done by all involved parties.
 
 
 Filtered transactions

@@ -40,7 +40,10 @@ Contracts
 Contracts in Corda are the pieces of software that check state transitions. Given a particular action a state will be consumed and a new output state will be created.
 A contract makes sure this operation is atomic across all participating parties.
 Since Nuts consent states only have an *externalId* and attachments, the contracts will mainly look at the attachment data to make sure that certain constraints at the meta level are correct.
-The *Nuts Consent Cordapp* will also use an `Corda Oracle <https://docs.corda.net/key-concepts-oracles.html>`_ to get confirmation on the consent data from *service space* (Under architectural construction).
+The *Nuts Consent Cordapp* will store the state of a consent request before making it an actual *DPC* record.
+Before the final *DPC* record can be created the other node has to check the attachment.
+Because this is a potential long-running operation it needs to be stored as a separate state.
+The attachment validation is done in *service space* (Under architectural construction).
 
 Flows
 -----
