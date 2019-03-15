@@ -19,6 +19,8 @@
 
 package nl.nuts.consent.contract
 
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.core.TestIdentity
@@ -33,6 +35,7 @@ class ConsentContractTest {
     private val ledgerServices = MockServices()
     private val homeCare = TestIdentity(CordaX500Name("homeCare", "Groenlo", "NL"))
     private val generalCare = TestIdentity(CordaX500Name("GP", "Groenlo", "NL"))
+    private val attHash = SecureHash.randomSHA256()
 
     //@Nested junit 5 required for this
     //inner class ConsentRequestState {
@@ -43,11 +46,11 @@ class ConsentContractTest {
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
@@ -65,11 +68,11 @@ class ConsentContractTest {
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party, generalCare.party))
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
@@ -87,11 +90,11 @@ class ConsentContractTest {
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
@@ -109,15 +112,15 @@ class ConsentContractTest {
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
@@ -135,15 +138,15 @@ class ConsentContractTest {
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
@@ -165,7 +168,7 @@ class ConsentContractTest {
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
@@ -183,7 +186,7 @@ class ConsentContractTest {
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 attachment( // unsigned
                         ConsentContract.CONTRACT_ID,
@@ -204,7 +207,8 @@ class ConsentContractTest {
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createValidPAS(homeCare, attHash), createValidPAS(generalCare, attHash)), listOf(homeCare.party, generalCare.party))
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
@@ -212,12 +216,12 @@ class ConsentContractTest {
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.FinalizeRequest()
                 )
                 verifies()
             }
@@ -238,12 +242,12 @@ class ConsentContractTest {
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.FinalizeRequest()
                 )
                 `fails with`("Only ConsentRequestStates are consumed")
             }
@@ -256,11 +260,11 @@ class ConsentContractTest {
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
@@ -268,12 +272,12 @@ class ConsentContractTest {
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.FinalizeRequest()
                 )
                 `fails with`("The right amount of states are consumed")
             }
@@ -286,23 +290,145 @@ class ConsentContractTest {
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                        ConsentRequestState("consentStateUuid", listOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
                 )
                 attachment(
                         ConsentContract.CONTRACT_ID,
-                        SecureHash.randomSHA256(),
+                        attHash,
                         listOf(homeCare.party, generalCare.party).map{ it.owningKey }
                 )
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.FinalizeRequest()
                 )
                 `fails with`("Only ConsentStates are created")
             }
         }
+    }
+
+    @Test
+    fun `AcceptRequest requires complete list of PartyAttachmentSignatures`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createValidPAS(homeCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.FinalizeRequest()
+                )
+                `fails with`("The set of attachment signature parties and signing parties are the same")
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest requires list of PartyAttachmentSignatures that match attachments`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createValidPAS(homeCare, SecureHash.allOnesHash), createValidPAS(generalCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.FinalizeRequest()
+                )
+                `fails with`("The set of attachment signature hashes and attachment hashes are the same")
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest requires unique set of PartyAttachmentSignatures`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createValidPAS(generalCare, attHash), createValidPAS(generalCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.FinalizeRequest()
+                )
+                `fails with`("All attachment signatures are unique")
+            }
+        }
+    }
+
+    @Test
+    fun `AcceptRequest requires valid set of PartyAttachmentSignatures`() {
+        ledgerServices.ledger {
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", listOf(attHash),
+                                listOf(createInValidPAS(homeCare, attHash), createValidPAS(generalCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentState("consentStateUuid", listOf(homeCare.party, generalCare.party))
+                )
+                attachment(
+                        ConsentContract.CONTRACT_ID,
+                        attHash,
+                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
+                )
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.FinalizeRequest()
+                )
+                `fails with`("All signatures are valid")
+            }
+        }
+    }
+
+    fun createValidPAS(testIdentity: TestIdentity, hash:SecureHash) : PartyAttachmentSignature {
+        val signedBytes = Crypto.doSign(testIdentity.keyPair.private, hash.bytes)
+        val signature = DigitalSignature.WithKey(testIdentity.publicKey, signedBytes)
+
+        return PartyAttachmentSignature(testIdentity.party, hash, signature)
+    }
+
+    fun createInValidPAS(testIdentity: TestIdentity, hash:SecureHash) : PartyAttachmentSignature {
+        val signedBytes = Crypto.doSign(testIdentity.keyPair.private, SecureHash.allOnesHash.bytes)
+        val signature = DigitalSignature.WithKey(testIdentity.publicKey, signedBytes)
+
+        return PartyAttachmentSignature(testIdentity.party, hash, signature)
     }
 }

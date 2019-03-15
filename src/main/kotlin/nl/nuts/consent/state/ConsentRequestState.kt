@@ -21,17 +21,24 @@ package nl.nuts.consent.state
 
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.DigitalSignatureWithCert
+import nl.nuts.consent.contract.PartyAttachmentSignature
 
 /**
  * The ConsentRequestState represents the current state of the request. This extra state is required
  * for doing an external check by a Party. The external check can be a long running transaction.
  *
  * @param consentStateExternalId the external id of the ConsentState record
+ * @param attachments list of attachment hashes that need to be present at each transaction
+ * @param signatures list of Party signatures representing parties that have completed checks against the encrypted attachment
  * @param parties involved parties
  */
 data class ConsentRequestState(val consentStateExternalId: String,
+                               val attachments: List<SecureHash>,
+                               val signatures: List<PartyAttachmentSignature>,
                                val parties: List<Party> = ArrayList()) : LinearState {
 
     override val linearId: UniqueIdentifier get() = UniqueIdentifier("${consentStateExternalId}_REQ")
