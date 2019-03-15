@@ -75,10 +75,11 @@ class ConsentContract : Contract {
             }
 
             open fun verifyAttachments(tx: LedgerTransaction) {
-                val command = tx.commands.requireSingleCommand<ConsentCommands>()
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
-                    "All attachments must be signed by all participants" using (tx.attachments.all { it.signerKeys.containsAll(command.signers) })
+                    "There must at least be 1 attachment" using (attachments.isNotEmpty())
+                    "Attachments are unique" using (attachments.toSet().size == attachments.size)
                 }
             }
         }
@@ -93,9 +94,11 @@ class ConsentContract : Contract {
             }
 
             fun verifyAttachmentsWithState(tx: LedgerTransaction, state: ConsentRequestState) {
+                val txAttachments = tx.attachments.filter { it !is ContractAttachment }
+
                 "All attachments are unique" using (state.attachments.size == state.attachments.toSet().size)
-                "Attachments in state have the same amount as include in the transaction" using (state.attachments.size == tx.attachments.size)
-                "All attachments in state are include in the transaction" using (arrayOf(state.attachments) contentEquals arrayOf(tx.attachments.map{it.id}))
+                "Attachments in state have the same amount as include in the transaction" using (state.attachments.size == txAttachments.size)
+                "All attachments in state are include in the transaction" using (arrayOf(state.attachments) contentEquals arrayOf(txAttachments.map{it.id}))
 
                 "All attachment signatures are unique" using (state.signatures.size == state.signatures.toSet().size)
                 "All signatures belong to signing parties" using (state.participants.containsAll(state.signatures.map{it.party}))
@@ -110,15 +113,16 @@ class ConsentContract : Contract {
         class CreateRequest : GenericRequest() {
             override fun verifyStates(tx: LedgerTransaction) {
                 super.verifyStates(tx)
+                val txAttachments = tx.attachments.filter { it !is ContractAttachment }
+
                 requireThat {
-                    "The right amount of states are consumed" using (tx.inputs.size == 0)
+                    "The right amount of states are consumed" using (tx.inputs.isEmpty())
                     "Only ConsentRequestStates are created" using (tx.outputs.all { it.data is ConsentRequestState })
 
                     val out = tx.outputsOfType<ConsentRequestState>().first()
 
-                    "The number of attachments must be at least 1" using (out.attachments.isNotEmpty())
-                    "Attachments in state have the same amount as include in the transaction" using (out.attachments.size == tx.attachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(out.attachments) contentEquals arrayOf(tx.attachments.map{it.id}))
+                    "Attachments in state have the same amount as included in the transaction" using (out.attachments.size == txAttachments.size)
+                    "All attachments in state are include in the transaction" using (arrayOf(out.attachments) contentEquals arrayOf(txAttachments.map{it.id}))
                 }
             }
         }

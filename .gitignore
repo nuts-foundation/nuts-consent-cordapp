@@ -9,3 +9,5 @@ _build
 build
 .gradle
 
+#MacOS
+.DS_Store
