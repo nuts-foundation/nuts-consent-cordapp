@@ -78,6 +78,15 @@ allprojects {
             javaParameters = true   // Useful for reflection.
         }
     }
+
+    jacocoTestReport {
+        reports {
+            xml.enabled true
+            xml.destination file("${buildDir}/reports/jacoco/report.xml")
+            html.enabled true
+            csv.enabled false
+        }
+    }
 }
 
 apply plugin: 'net.corda.plugins.cordapp'
@@ -99,22 +108,18 @@ dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
 }
 
+// the plugin creates exec files when running the tests, this task creates a report out of those files
+
 task codeCoverageReport(type: JacocoReport) {
-    subprojects.each {
-        sourceSets it.sourceSets.main
-    }
+//    subprojects.each {
+//        sourceSets it.sourceSets.main
+//    }
+    sourceSets sourceSets.main
 
     executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
-
-    reports {
-        xml.enabled true
-        xml.destination file("${buildDir}/reports/jacoco/report.xml")
-        html.enabled false
-        csv.enabled false
-    }
 }
 
-codeCoverageReport.dependsOn test
+//codeCoverageReport.dependsOn test
 //codeCoverageReport.dependsOn {
 //    subprojects*.test
 //}
