@@ -63,28 +63,6 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `createNewRequest transaction must have same set of attachments as output state`() {
-        ledgerServices.ledger {
-            transaction {
-                output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentRequestState("consentStateUuid", emptyList(), emptyList(), listOf(homeCare.party, generalCare.party))
-                )
-                attachment(
-                        ConsentContract.CONTRACT_ID,
-                        attHash,
-                        listOf(homeCare.party, generalCare.party).map{ it.owningKey }
-                )
-                command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.CreateRequest()
-                )
-                `fails with`("Attachments in state have the same amount as include in the transaction")
-            }
-        }
-    }
-
-    @Test
     fun `createNewRequest transaction must have unique set of participants`() {
         ledgerServices.ledger {
             transaction {
