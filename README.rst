@@ -12,6 +12,9 @@ Discovery Consent Cordapp by the Nuts foundation for distributing Consent record
     :target: https://nuts-documentation.readthedocs.io/projects/nuts-consent-cordapp/en/latest/?badge=latest
     :alt: Documentation Status
 
+.. image:: https://codecov.io/gh/nuts-foundation/nuts-consent-cordapp/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/nuts-foundation/nuts-consent-cordapp
+
 .. inclusion-marker-for-contribution
 
 Setup
