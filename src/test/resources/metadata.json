@@ -1,0 +1,19 @@
+{
+  "domain": ["MEDICAL"],
+  "secureKey": {
+    "alg": "AES_GCM_256",
+    "iv": "123456=="
+  },
+  "organisationSecureKeys": [
+    {
+      "organisationId": "http://nuts.nl/naming/organisation#test",
+      "alg": "RSA_3k",
+      "cipherText": "123456=="
+    }
+  ],
+  "previousAttachmentId": "uuid",
+  "period" : {
+    "validFrom": "2019-01-01",
+    "validTo": "2020-01-01"
+  }
+}

@@ -31,6 +31,7 @@ import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import java.io.File
 
+const val VALID_META_ZIP_PATH = "src/test/resources/valid_metadata.zip"
 const val DUMMY_ZIP_PATH = "src/test/resources/dummy.zip"
 const val DUMMY2_ZIP_PATH = "src/test/resources/dummy2.zip"
 
@@ -39,7 +40,8 @@ class ConsentContractTest {
     private val homeCare = TestIdentity(CordaX500Name("homeCare", "Groenlo", "NL"))
     private val generalCare = TestIdentity(CordaX500Name("GP", "Groenlo", "NL"))
     private val unknownCare = TestIdentity(CordaX500Name("Shadow", "Groenlo", "NL"))
-    private val validAttachment = File(DUMMY_ZIP_PATH)
+    private val validAttachment = File(VALID_META_ZIP_PATH)
+    private val dummyAttachment = File(DUMMY_ZIP_PATH)
     private val unknownAttachment = File(DUMMY2_ZIP_PATH)
 
     //@Nested junit 5 required for this
@@ -67,9 +69,30 @@ class ConsentContractTest {
     }
 
     @Test
+    fun `GenericRequest invalid attachment`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = dummyAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState("consentStateUuid", setOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.GenericRequest()
+                )
+                `fails with`("Attachment is missing required metadata file")
+            }
+        }
+    }
+
+    @Test
     fun `GenericRequest must have unique set of participants`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -90,7 +113,7 @@ class ConsentContractTest {
     @Test
     fun `GenericRequest must include all participants as signers`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -111,7 +134,7 @@ class ConsentContractTest {
     @Test
     fun `GenericRequest must have one output`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -136,7 +159,7 @@ class ConsentContractTest {
     @Test
     fun `GenericRequest must at least have 1 attachment`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -177,7 +200,7 @@ class ConsentContractTest {
     @Test
     fun `CreateRequest must have no inputs`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -202,7 +225,7 @@ class ConsentContractTest {
     @Test
     fun `CreateRequest must only have ConsentRequestState as output`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -223,7 +246,7 @@ class ConsentContractTest {
     @Test
     fun `CreateRequest must at least have 1 attachment in state`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -244,7 +267,7 @@ class ConsentContractTest {
     @Test
     fun `CreateRequest attachments must be the same for state and transaction`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             val unknownAttachmentInputStream = unknownAttachment.inputStream()
@@ -268,7 +291,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest attachments must be the same for state and transaction`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             val unknownAttachmentInputStream = unknownAttachment.inputStream()
@@ -322,7 +345,7 @@ class ConsentContractTest {
     @Test
     fun `ProcessRequest only consumes ConsentRequestStates`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -347,7 +370,7 @@ class ConsentContractTest {
     @Test
     fun `ProcessRequest only consumes a single ConsentRequestState`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -402,7 +425,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest attachments must be the same for state and transaction`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             val unknownAttachmentInputStream = unknownAttachment.inputStream()
@@ -430,7 +453,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest only produces ConsentStates`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
             
             transaction {
@@ -455,7 +478,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest requires complete list of PartyAttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
             
             transaction {
@@ -481,7 +504,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest requires list of PartyAttachmentSignatures that match attachments`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
             
             transaction {
@@ -507,7 +530,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest requires unique set of PartyAttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
             
             transaction {
@@ -533,7 +556,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest requires valid set of PartyAttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
             
             transaction {
@@ -559,7 +582,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest transaction must have same set of attachments as output state`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -584,7 +607,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest only accepts PartyAttachmentSignatures from involved parties`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -636,7 +659,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest transaction must have same set of attachments as output state`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -662,7 +685,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest only creates ConsentRequestStates`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -687,7 +710,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest requires more attachments on output than input`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -712,7 +735,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest requires list of PartyAttachmentSignatures that match attachments`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -739,7 +762,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest requires unique set of PartyAttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -766,7 +789,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest requires valid set of PartyAttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -793,7 +816,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest only accepts PartyAttachmentSignatures from involved parties`() {
         ledgerServices.ledger {
-            val attachmentInputStream = validAttachment.inputStream()
+            val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {

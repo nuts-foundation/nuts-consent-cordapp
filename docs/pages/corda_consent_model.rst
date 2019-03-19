@@ -28,7 +28,7 @@ Attachments referenced in a Nuts consent transaction contain two files:
 The *cipher_text.bin* file is the encrypted FHIR consent bundle and the metadata contains data on how to decrypt the file and three custom fields:
 
     - domain, denotes the target audience for this attachment: medical, PGO or insurance nodes
-    - previous_attachment_id, points to the previous attachment if the FHIR consent model has only be updated (increase of consent resource version)
+    - previousAttachmentId, points to the previous attachment if the FHIR consent model has only be updated (increase of consent resource version)
     - period, the only part of the FHIR consent record that is also available without encryption. This is done to prevent sending attachments to other parties when they have already expired.
 
 .. todo:

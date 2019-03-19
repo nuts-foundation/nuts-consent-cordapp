@@ -38,7 +38,7 @@ plugins {
 }
 
 ext {
-
+    jacksonVersion = '2.9.8'
 }
 
 repositories {
@@ -94,6 +94,8 @@ apply plugin: 'net.corda.plugins.cordformation'
 dependencies {
     // Use the Kotlin JDK 8 standard library.
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
 
     implementation("net.corda:corda-node-api:$corda") {
         exclude group: 'org.hibernate'

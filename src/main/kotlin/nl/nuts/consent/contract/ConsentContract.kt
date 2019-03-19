@@ -19,12 +19,20 @@
 
 package nl.nuts.consent.contract
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Requirements.using
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
+import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentRequestState
 import nl.nuts.consent.state.ConsentState
+import java.lang.IllegalStateException
+import java.nio.charset.Charset
+import java.text.SimpleDateFormat
+import java.util.jar.JarEntry
+import java.util.zip.ZipEntry
 
 /**
  * The consent contract. It validates state transitions based on various commands.
@@ -33,6 +41,20 @@ class ConsentContract : Contract {
     companion object {
         // Used to identify our contract when building a transaction.
         const val CONTRACT_ID = "nl.nuts.consent.contract.ConsentContract"
+
+    }
+
+    object Serialisation {
+        val _objectMapper : ObjectMapper by lazy {
+            val objectMapper = ObjectMapper()
+            objectMapper.registerModule(JavaTimeModule())
+            objectMapper.dateFormat = SimpleDateFormat.getDateInstance()
+            objectMapper
+        }
+
+        fun objectMapper() : ObjectMapper{
+            return _objectMapper
+        }
     }
 
     override fun verify(tx: LedgerTransaction) {
@@ -40,6 +62,33 @@ class ConsentContract : Contract {
 
         // verification delegated to specific commands
         command.value.verifyStates(tx)
+
+        // verification of metadata contents
+        tx.attachments.filter{ it !is ContractAttachment }.all { verifyMetadata(it) }
+    }
+
+
+    private fun verifyMetadata(attachment: Attachment) : Boolean {
+        val metadata = extractMetadata(attachment)
+        return metadata.verify()
+    }
+
+    private fun extractMetadata(attachment: Attachment) : ConsentMetadata {
+        val inStream = attachment.openAsJAR()
+        var entry: JarEntry = inStream.nextJarEntry
+
+        try {
+            while (!entry.name.endsWith("json")) {
+                entry = inStream.nextJarEntry
+            }
+        }
+        catch(e :IllegalStateException) {
+            throw IllegalStateException("Attachment is missing required metadata file")
+        }
+
+        val reader = inStream.bufferedReader(Charset.forName("UTF8"))
+
+        return Serialisation.objectMapper().readValue(reader, ConsentMetadata::class.java)
     }
 
     // Used to indicate the transaction's intent.
@@ -88,20 +137,24 @@ class ConsentContract : Contract {
          */
         open class ProcessRequest : GenericRequest() {
             override fun verifyInputState(tx: LedgerTransaction) {
-                "The right amount of states are consumed" using (tx.inputs.size == 1)
-                "Only ConsentRequestStates are consumed" using (tx.inputs.all { it.state.data is ConsentRequestState })
+                requireThat {
+                    "The right amount of states are consumed" using (tx.inputs.size == 1)
+                    "Only ConsentRequestStates are consumed" using (tx.inputs.all { it.state.data is ConsentRequestState })
+                }
             }
 
             fun verifyAttachmentsWithState(tx: LedgerTransaction, state: ConsentRequestState) {
                 val txAttachments = tx.attachments.filter { it !is ContractAttachment }
 
-                "Attachments in state have the same amount as include in the transaction" using (state.attachments.size == txAttachments.size)
-                "All attachments in state are include in the transaction" using (arrayOf(state.attachments.toList()) contentEquals arrayOf(txAttachments.map{it.id}))
+                requireThat {
+                    "Attachments in state have the same amount as include in the transaction" using (state.attachments.size == txAttachments.size)
+                    "All attachments in state are include in the transaction" using (arrayOf(state.attachments.toList()) contentEquals arrayOf(txAttachments.map { it.id }))
 
-                "All attachment signatures are unique" using (state.signatures.size == state.signatures.toSet().size)
-                "All signatures belong to signing parties" using (state.participants.containsAll(state.signatures.map{it.party}))
-                "All signatures belong to attachments" using (state.attachments.containsAll(state.signatures.map{it.attachmentHash}))
-                "All signatures are valid" using (state.signatures.all{it.verify()})
+                    "All attachment signatures are unique" using (state.signatures.size == state.signatures.toSet().size)
+                    "All signatures belong to signing parties" using (state.participants.containsAll(state.signatures.map { it.party }))
+                    "All signatures belong to attachments" using (state.attachments.containsAll(state.signatures.map { it.attachmentHash }))
+                    "All signatures are valid" using (state.signatures.all { it.verify() })
+                }
             }
         }
 
