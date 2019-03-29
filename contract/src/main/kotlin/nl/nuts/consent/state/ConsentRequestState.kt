@@ -19,12 +19,14 @@
 
 package nl.nuts.consent.state
 
+import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.DigitalSignatureWithCert
+import nl.nuts.consent.contract.ConsentContract
 import nl.nuts.consent.contract.PartyAttachmentSignature
 
 /**
@@ -36,6 +38,7 @@ import nl.nuts.consent.contract.PartyAttachmentSignature
  * @param signatures list of Party signatures representing parties that have completed checks against the encrypted attachment
  * @param parties involved parties
  */
+@BelongsToContract(ConsentContract::class)
 data class ConsentRequestState(val consentStateExternalId: String,
                                val attachments: Set<SecureHash>,
                                val signatures: List<PartyAttachmentSignature>,

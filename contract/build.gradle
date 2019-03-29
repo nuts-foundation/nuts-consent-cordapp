@@ -17,6 +17,19 @@
  *
  */
 
-rootProject.name = 'nuts-consent-cordapp'
-include 'contract'
-include 'flows'
+dependencies {
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
+
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
+
+    // Corda dependencies.
+    cordaCompile "net.corda:corda-core:$corda"
+    cordaRuntime "net.corda:corda:$corda"
+
+    // test dependencies
+    testImplementation("net.corda:corda-test-utils:$corda")
+    testImplementation("net.corda:corda-node-driver:$corda")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:$kotlinVersion")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
+}

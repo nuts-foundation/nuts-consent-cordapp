@@ -44,9 +44,6 @@ class ConsentContractTest {
     private val dummyAttachment = File(DUMMY_ZIP_PATH)
     private val unknownAttachment = File(DUMMY2_ZIP_PATH)
 
-    //@Nested junit 5 required for this
-    //inner class ConsentRequestState {
-
     @Test
     fun `GenericRequest valid transaction`() {
         ledgerServices.ledger {
@@ -455,7 +452,7 @@ class ConsentContractTest {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
-            
+
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
@@ -480,7 +477,7 @@ class ConsentContractTest {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
-            
+
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
@@ -506,7 +503,7 @@ class ConsentContractTest {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
-            
+
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
@@ -532,7 +529,7 @@ class ConsentContractTest {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
-            
+
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
@@ -558,7 +555,7 @@ class ConsentContractTest {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
-            
+
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
