@@ -19,22 +19,16 @@
 
 package nl.nuts.consent.state
 
+import net.corda.core.contracts.UniqueIdentifier
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class ConsentStateTest {
 
     @Test
-    fun `linear id of ConsentState is its externalID`() {
-        val state = ConsentState("uuid", emptyList())
+    fun `string representation of ConsentState is its externalID concatenated with its UUID`() {
+        val state = ConsentState(UniqueIdentifier("uuid"), emptyList())
 
-        assertEquals("uuid", state.linearId.externalId)
-    }
-
-    @Test
-    fun `string representation of ConsentState is its externalID`() {
-        val state = ConsentState("uuid", emptyList())
-
-        assertEquals("uuid", state.toString())
+        assertEquals("${state.linearId.externalId}_${state.linearId.id}", state.toString())
     }
 }

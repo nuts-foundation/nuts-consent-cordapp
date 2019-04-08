@@ -143,6 +143,14 @@ class ConsentContract : Contract {
                 }
             }
 
+            override fun verifyOutputState(tx: LedgerTransaction) {
+                super.verifyOutputState(tx)
+
+                requireThat {
+                    "Output state has the same UUID as input state" using ((tx.inputs.first().state.data as LinearState).linearId == (tx.outputs.first().data as LinearState).linearId)
+                }
+            }
+
             fun verifyAttachmentsWithState(tx: LedgerTransaction, state: ConsentRequestState) {
                 val txAttachments = tx.attachments.filter { it !is ContractAttachment }
 
@@ -151,7 +159,7 @@ class ConsentContract : Contract {
                     "All attachments in state are include in the transaction" using (arrayOf(state.attachments.toList()) contentEquals arrayOf(txAttachments.map { it.id }))
 
                     "All attachment signatures are unique" using (state.signatures.size == state.signatures.toSet().size)
-                    "All signatures belong to signing parties" using (state.participants.containsAll(state.signatures.map { it.party }))
+//                    "All signatures belong to signing parties" using (state.participants.containsAll(state.signatures.map { it.party }))
                     "All signatures belong to attachments" using (state.attachments.containsAll(state.signatures.map { it.attachmentHash }))
                     "All signatures are valid" using (state.signatures.all { it.verify() })
                 }
@@ -200,13 +208,17 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "Output state has [attachments] more signatures than input state" using (out.signatures.size - inState.signatures.size == out.attachments.size)
+                    // using equality to verify everything is still there
+                    "Old attachment signatures must still all be present" using ((out.signatures - inState.signatures).size == out.attachments.size)
                 }
             }
         }
 
         /**
          * Command to finalize the request. All parties have done additional checks on the encrypted attachment data
+         *
          */
+        // todo: finalizer can not be last signer or else last party can change public keys
         class FinalizeRequest : ProcessRequest() {
             override fun verifyOutputState(tx: LedgerTransaction) {
                 super.verifyOutputState(tx)
@@ -225,6 +237,7 @@ class ConsentContract : Contract {
 
                 requireThat {
                     // check if the right amount of attachments are present, given that no duplicate may exist, this is enough
+                    // todo: what to do when a single node handles transactions for multiple participants?
                     "All signatures are present" using (inState.signatures.size == inState.participants.size * inState.attachments.size)
                 }
             }
