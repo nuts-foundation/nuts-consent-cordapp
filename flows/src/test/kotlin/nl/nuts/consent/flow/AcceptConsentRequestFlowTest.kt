@@ -72,7 +72,7 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
     @Test
     fun `recorded transaction has a single input, a single output and a single attachment`() {
         // we create a signature with the key of a Corda Party. But this must be a Nuts party (care provider)
-        val attSig = PartyAttachmentSignature(a.info.legalIdentities.first(), validHash!!, a.services.keyManagementService.sign(validHash!!.bytes, a.info.legalIdentities.first().owningKey))
+        val attSig = PartyAttachmentSignature("https://nuts.nl/identities/agbcode#00000007", validHash!!, a.services.keyManagementService.sign(validHash!!.bytes, a.info.legalIdentities.first().owningKey))
 
         val flow = ConsentRequestFlows.AcceptConsentRequest(linearId!!, listOf(attSig))
         val future = a.startFlow(flow)

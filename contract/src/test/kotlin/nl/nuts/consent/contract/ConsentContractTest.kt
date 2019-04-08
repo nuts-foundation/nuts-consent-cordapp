@@ -817,13 +817,13 @@ class ConsentContractTest {
         val signedBytes = Crypto.doSign(testIdentity.keyPair.private, hash.bytes)
         val signature = DigitalSignature.WithKey(testIdentity.publicKey, signedBytes)
 
-        return PartyAttachmentSignature(testIdentity.party, hash, signature)
+        return PartyAttachmentSignature("https://nuts.nl/identities/agbcode#00000007", hash, signature)
     }
 
     fun createInValidPAS(testIdentity: TestIdentity, hash:SecureHash) : PartyAttachmentSignature {
         val signedBytes = Crypto.doSign(testIdentity.keyPair.private, SecureHash.allOnesHash.bytes)
         val signature = DigitalSignature.WithKey(testIdentity.publicKey, signedBytes)
 
-        return PartyAttachmentSignature(testIdentity.party, hash, signature)
+        return PartyAttachmentSignature("https://nuts.nl/identities/agbcode#00000007", hash, signature)
     }
 }

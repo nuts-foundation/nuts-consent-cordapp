@@ -21,6 +21,7 @@ package nl.nuts.consent.contract
 
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.security.SignatureException
@@ -29,7 +30,7 @@ import java.security.SignatureException
  * Wrapper for digital signature created by a Party validating that the content of the attachment is indeed intended for that Party.
  */
 @CordaSerializable
-data class PartyAttachmentSignature(val party: Party, val attachmentHash: SecureHash, val signature: DigitalSignature.WithKey) {
+data class PartyAttachmentSignature(val legalEntityURI: String, val attachmentHash: SecureHash, val signature: DigitalSignature.WithKey) {
     fun verify() : Boolean {
         try {
             return signature.verify(attachmentHash.bytes)
