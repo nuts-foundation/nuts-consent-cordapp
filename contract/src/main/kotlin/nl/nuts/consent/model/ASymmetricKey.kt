@@ -20,7 +20,7 @@
 package nl.nuts.consent.model
 
 open class ASymmetricKey {
-    var organisationId: String? = null
+    var legalEntityURI: String? = null
     var alg: String? = null
     var cipherText: String? = null
 }

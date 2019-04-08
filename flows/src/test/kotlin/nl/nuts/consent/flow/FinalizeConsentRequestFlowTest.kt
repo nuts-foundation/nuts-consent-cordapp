@@ -27,30 +27,24 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentState
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class AcceptConsentRequestFlowTest : GenericFlowTests() {
+class FinalizeConsentRequestFlowTest : GenericFlowTests() {
     private var linearId : UniqueIdentifier? = null
-
-    init {
-        listOf(a, b).forEach {
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptNewConsentRequest::class.java)
-        }
-    }
 
     @Before
     override fun setup() {
         super.setup()
-        val signedTx = runCorrectTransaction()
-        linearId = (signedTx.tx.outputs.first().data as LinearState).linearId
+        runCorrectTransaction()
     }
 
     @Test
     fun `unknown external ID raises flow exception`() {
-        val flow = ConsentRequestFlows.AcceptConsentRequest(UniqueIdentifier("uuid"), emptyList())
+        val flow = ConsentRequestFlows.FinalizeConsentRequest(UniqueIdentifier("uuid"))
         val future = a.startFlow(flow)
         network.runNetwork()
         assertFailsWith(FlowException::class) {
@@ -60,10 +54,7 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
 
     @Test
     fun `recorded transaction has a single input, a single output and a single attachment`() {
-        // we create a signature with the key of a Corda Party. But this must be a Nuts party (care provider)
-        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, a.services.keyManagementService.sign(validHash!!.bytes, a.info.legalIdentities.first().owningKey))
-
-        val flow = ConsentRequestFlows.AcceptConsentRequest(linearId!!, listOf(attSig))
+        val flow = ConsentRequestFlows.FinalizeConsentRequest(linearId!!)
         val future = a.startFlow(flow)
         network.runNetwork()
         val signedTx = future.get()
@@ -80,7 +71,7 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
             val attachments = recordedTx.tx.attachments
             assertEquals(2, attachments.size) // the first attachment is the contract and state jar
 
-            val recordedState = txOutputs[0].data as ConsentRequestState
+            val recordedState = txOutputs[0].data as ConsentState
             assertEquals("uuid", recordedState.consentStateUUID.externalId)
         }
     }
@@ -89,6 +80,21 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
         val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), listOf(b.info.singleIdentity()))
         val future = a.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+
+        linearId = (future.get().tx.outputs.first().data as LinearState).linearId
+
+        // accept from party a
+        val attSigA = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, a.services.keyManagementService.sign(validHash!!.bytes, a.info.legalIdentities.first().owningKey))
+        val flowA = ConsentRequestFlows.AcceptConsentRequest(linearId!!, listOf(attSigA))
+        val futureA = a.startFlow(flowA)
+        network.runNetwork()
+        futureA.getOrThrow()
+
+        // accept from party b
+        val attSigB = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, b.services.keyManagementService.sign(validHash!!.bytes, b.info.legalIdentities.first().owningKey))
+        val flowB = ConsentRequestFlows.AcceptConsentRequest(linearId!!, listOf(attSigB))
+        val futureB = b.startFlow(flowB)
+        network.runNetwork()
+        return futureB.getOrThrow()
     }
 }

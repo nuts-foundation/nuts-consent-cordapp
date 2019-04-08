@@ -23,11 +23,9 @@ import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.DigitalSignatureWithCert
 import nl.nuts.consent.contract.ConsentContract
-import nl.nuts.consent.contract.PartyAttachmentSignature
+import nl.nuts.consent.contract.AttachmentSignature
 
 /**
  * The ConsentRequestState represents the current state of the request. This extra state is required
@@ -41,13 +39,13 @@ import nl.nuts.consent.contract.PartyAttachmentSignature
 @BelongsToContract(ConsentContract::class)
 data class ConsentRequestState(val consentStateUUID: UniqueIdentifier,
                                val attachments: Set<SecureHash>,
-                               val signatures: List<PartyAttachmentSignature>,
+                               val signatures: List<AttachmentSignature>,
                                val parties: List<Party> = ArrayList()) : LinearState {
 
     constructor(externalId: String,
-            attachments: Set<SecureHash>,
-            signatures: List<PartyAttachmentSignature>,
-            parties: List<Party>) : this(UniqueIdentifier(externalId), attachments, signatures, parties)
+                attachments: Set<SecureHash>,
+                signatures: List<AttachmentSignature>,
+                parties: List<Party>) : this(UniqueIdentifier(externalId), attachments, signatures, parties)
 
     override val linearId: UniqueIdentifier get() = consentStateUUID
     override val participants: List<Party> get() = parties

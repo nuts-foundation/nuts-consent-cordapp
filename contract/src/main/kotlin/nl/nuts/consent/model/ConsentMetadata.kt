@@ -25,7 +25,8 @@ open class ConsentMetadata {
     var previousAttachmentId: String? = null
     var period: Period? = null
 
-    fun verify() : Boolean {
-        return true
+    //todo
+    fun verify() {
+        // raises when invalid
     }
 }

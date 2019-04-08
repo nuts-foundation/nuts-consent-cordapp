@@ -26,8 +26,6 @@ import nl.nuts.consent.state.ConsentRequestState
 import org.junit.Test
 import kotlin.test.assertEquals
 
-const val VALID_META_ZIP_PATH = "src/test/resources/valid_metadata.zip"
-
 class NewConsentRequestFlowTest : GenericFlowTests() {
 
     @Test

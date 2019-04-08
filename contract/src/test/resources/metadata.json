@@ -6,7 +6,7 @@
   },
   "organisationSecureKeys": [
     {
-      "organisationId": "http://nuts.nl/naming/organisation#test",
+      "legalEntityURI": "http://nuts.nl/naming/organisation#test",
       "alg": "RSA_3k",
       "cipherText": "123456=="
     }

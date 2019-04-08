@@ -69,7 +69,7 @@ class ConsentMetadataTest {
 
         assertEquals("RSA_3k", m1.organisationSecureKeys!!.first().alg)
         assertEquals("123456==", m1.organisationSecureKeys!!.first().cipherText)
-        assertEquals("http://nuts.nl/naming/organisation#test", m1.organisationSecureKeys!!.first().organisationId)
+        assertEquals("http://nuts.nl/naming/organisation#test", m1.organisationSecureKeys!!.first().legalEntityURI)
 
     }
 
@@ -104,7 +104,7 @@ class ConsentMetadataTest {
         val assKey = ASymmetricKey()
         assKey.alg = "RSA_3k"
         assKey.cipherText = "123456=="
-        assKey.organisationId = "http://nuts.nl/naming/organisation#test"
+        assKey.legalEntityURI = "http://nuts.nl/naming/organisation#test"
         m1.organisationSecureKeys = listOf(assKey)
 
         return m1

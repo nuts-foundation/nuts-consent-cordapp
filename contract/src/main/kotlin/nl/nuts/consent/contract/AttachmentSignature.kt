@@ -30,7 +30,7 @@ import java.security.SignatureException
  * Wrapper for digital signature created by a Party validating that the content of the attachment is indeed intended for that Party.
  */
 @CordaSerializable
-data class PartyAttachmentSignature(val legalEntityURI: String, val attachmentHash: SecureHash, val signature: DigitalSignature.WithKey) {
+data class AttachmentSignature(val legalEntityURI: String, val attachmentHash: SecureHash, val signature: DigitalSignature.WithKey) {
     fun verify() : Boolean {
         try {
             return signature.verify(attachmentHash.bytes)

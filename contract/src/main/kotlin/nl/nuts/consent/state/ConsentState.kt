@@ -21,7 +21,6 @@ package nl.nuts.consent.state
 
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 
@@ -36,7 +35,7 @@ import net.corda.core.serialization.CordaSerializable
 data class ConsentState(val consentStateUUID: UniqueIdentifier, val parties: List<Party> = ArrayList()) : LinearState {
 
     override val linearId: UniqueIdentifier get() = consentStateUUID
-    override val participants: List<AbstractParty> get() = parties
+    override val participants: List<Party> get() = parties
 
     override fun toString() = consentStateUUID.toString()
 }

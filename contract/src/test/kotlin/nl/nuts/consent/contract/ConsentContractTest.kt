@@ -476,7 +476,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `FinalizeRequest requires complete list of PartyAttachmentSignatures`() {
+    fun `FinalizeRequest requires complete list of AttachmentSignatures`() {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -502,7 +502,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `FinalizeRequest requires list of PartyAttachmentSignatures that match attachments`() {
+    fun `FinalizeRequest requires list of AttachmentSignatures that match attachments`() {
         ledgerServices.ledger {
             val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -528,7 +528,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `FinalizeRequest requires unique set of PartyAttachmentSignatures`() {
+    fun `FinalizeRequest requires unique set of AttachmentSignatures`() {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -554,7 +554,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `FinalizeRequest requires valid set of PartyAttachmentSignatures`() {
+    fun `FinalizeRequest requires valid set of AttachmentSignatures`() {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -563,7 +563,7 @@ class ConsentContractTest {
                 input(
                         ConsentContract.CONTRACT_ID,
                         ConsentRequestState(consentStateUuid, setOf(attHash),
-                                listOf(createInValidPAS(homeCare, attHash), createValidPAS(generalCare, attHash)), listOf(homeCare.party, generalCare.party))
+                                listOf(createPASWrongSignature(homeCare, attHash), createValidPAS(generalCare, attHash)), listOf(homeCare.party, generalCare.party))
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
@@ -605,7 +605,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `FinalizeRequest only accepts PartyAttachmentSignatures from involved parties`() {
+    fun `FinalizeRequest only accepts AttachmentSignatures from involved parties`() {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -652,6 +652,32 @@ class ConsentContractTest {
                         ConsentContract.ConsentCommands.AcceptRequest()
                 )
                 verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `ProcessRequest invalid legalEntityURI`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = validAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState(consentStateUuid, setOf(attHash), emptyList(), listOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState(consentStateUuid, setOf(attHash),
+                                listOf(createPASWrongIdentity(homeCare, attHash)), listOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AcceptRequest()
+                )
+                `fails with`("unknown legalEntityURI found in attachmentSignatures, not present in attachments")
             }
         }
     }
@@ -733,7 +759,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest requires list of PartyAttachmentSignatures that match attachments`() {
+    fun `AcceptRequest requires list of AttachmentSignatures that match attachments`() {
         ledgerServices.ledger {
             val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -760,7 +786,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest requires unique set of PartyAttachmentSignatures`() {
+    fun `AcceptRequest requires unique set of AttachmentSignatures`() {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -787,7 +813,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `AcceptRequest requires valid set of PartyAttachmentSignatures`() {
+    fun `AcceptRequest requires valid set of AttachmentSignatures`() {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -801,7 +827,7 @@ class ConsentContractTest {
                 output(
                         ConsentContract.CONTRACT_ID,
                         ConsentRequestState(consentStateUuid, setOf(attHash),
-                                listOf(createInValidPAS(homeCare, attHash)), listOf(homeCare.party, generalCare.party))
+                                listOf(createPASWrongSignature(homeCare, attHash)), listOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -813,17 +839,24 @@ class ConsentContractTest {
         }
     }
 
-    fun createValidPAS(testIdentity: TestIdentity, hash:SecureHash) : PartyAttachmentSignature {
+    fun createValidPAS(testIdentity: TestIdentity, hash:SecureHash) : AttachmentSignature {
         val signedBytes = Crypto.doSign(testIdentity.keyPair.private, hash.bytes)
         val signature = DigitalSignature.WithKey(testIdentity.publicKey, signedBytes)
 
-        return PartyAttachmentSignature("https://nuts.nl/identities/agbcode#00000007", hash, signature)
+        return AttachmentSignature("http://nuts.nl/naming/organisation#test", hash, signature)
     }
 
-    fun createInValidPAS(testIdentity: TestIdentity, hash:SecureHash) : PartyAttachmentSignature {
+    fun createPASWrongSignature(testIdentity: TestIdentity, hash:SecureHash) : AttachmentSignature {
         val signedBytes = Crypto.doSign(testIdentity.keyPair.private, SecureHash.allOnesHash.bytes)
         val signature = DigitalSignature.WithKey(testIdentity.publicKey, signedBytes)
 
-        return PartyAttachmentSignature("https://nuts.nl/identities/agbcode#00000007", hash, signature)
+        return AttachmentSignature("http://nuts.nl/naming/organisation#test", hash, signature)
+    }
+
+    fun createPASWrongIdentity(testIdentity: TestIdentity, hash:SecureHash) : AttachmentSignature {
+        val signedBytes = Crypto.doSign(testIdentity.keyPair.private, hash.bytes)
+        val signature = DigitalSignature.WithKey(testIdentity.publicKey, signedBytes)
+
+        return AttachmentSignature("http://nuts.nl/naming/organisation#test2", hash, signature)
     }
 }

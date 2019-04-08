@@ -31,6 +31,9 @@ import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
+const val VALID_META_ZIP_PATH = "src/test/resources/valid_metadata.zip"
+
 abstract class GenericFlowTests {
     protected val network = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(
             TestCordapp.findCordapp("nl.nuts.consent.flow"),

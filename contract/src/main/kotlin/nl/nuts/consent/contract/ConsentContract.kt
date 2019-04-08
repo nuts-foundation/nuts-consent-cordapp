@@ -24,6 +24,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Requirements.using
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.LedgerTransaction
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentRequestState
@@ -64,13 +65,20 @@ class ConsentContract : Contract {
         command.value.verifyStates(tx)
 
         // verification of metadata contents
-        tx.attachments.filter{ it !is ContractAttachment }.all { verifyMetadata(it) }
-    }
+        val consentAttachments = tx.attachments.filter{ it !is ContractAttachment }
+        val metadataList = consentAttachments.map {extractMetadata(it)}
+        // raises IllegalState when invalid with correct message
+        metadataList.forEach { it.verify() }
 
-
-    private fun verifyMetadata(attachment: Attachment) : Boolean {
-        val metadata = extractMetadata(attachment)
-        return metadata.verify()
+        // legalEntityURI in AttachmentSignature must match those in metadata
+        val attLegalEntityURISet = metadataList.map { itOuter -> itOuter.organisationSecureKeys!!.map { it.legalEntityURI } }.flatten()
+        val outputState = tx.outputStates.first()
+        if (outputState is ConsentRequestState) {
+            val consentRequestState : ConsentRequestState = outputState
+            if (!consentRequestState.signatures.map { it.legalEntityURI }.all { attLegalEntityURISet.contains(it) }) {
+                throw IllegalArgumentException("unknown legalEntityURI found in attachmentSignatures, not present in attachments")
+            }
+        }
     }
 
     private fun extractMetadata(attachment: Attachment) : ConsentMetadata {
@@ -218,7 +226,6 @@ class ConsentContract : Contract {
          * Command to finalize the request. All parties have done additional checks on the encrypted attachment data
          *
          */
-        // todo: finalizer can not be last signer or else last party can change public keys
         class FinalizeRequest : ProcessRequest() {
             override fun verifyOutputState(tx: LedgerTransaction) {
                 super.verifyOutputState(tx)
