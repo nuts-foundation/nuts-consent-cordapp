@@ -18,15 +18,33 @@
  */
 package nl.nuts.consent.model
 
-open class ConsentMetadata {
-    var domain:List<Domain>? = null
-    var secureKey: SymmetricKey? = null
-    var organisationSecureKeys: List<ASymmetricKey>? = null
-    var previousAttachmentId: String? = null
-    var period: Period? = null
+import com.fasterxml.jackson.annotation.JsonProperty
+import net.corda.core.contracts.requireThat
+import javax.validation.constraints.*
 
-    //todo
+/**
+ * json format for metadata.json in attachment. Used as json schema
+ */
+data class ConsentMetadata (
+    @get:NotNull
+    @JsonProperty("domain") val domain:List<Domain>,
+
+    @get:NotNull
+    @JsonProperty("secureKey") val secureKey: SymmetricKey,
+
+    @get:NotNull
+    @JsonProperty("organisationSecureKeys") val organisationSecureKeys: List<ASymmetricKey>,
+
+    @JsonProperty("previousAttachmentId") val previousAttachmentId: String? = null,
+
+    @get:NotNull
+    @JsonProperty("period") val period: Period
+) {
     fun verify() {
-        // raises when invalid
+        requireThat {
+            "the list of Domains is not empty" using !domain.isEmpty()
+            "the list of organisationSecureKeys is not empty" using !organisationSecureKeys.isEmpty()
+        }
+        period.verify()
     }
 }

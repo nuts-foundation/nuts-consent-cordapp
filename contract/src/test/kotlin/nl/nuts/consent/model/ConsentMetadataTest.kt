@@ -23,9 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import org.junit.BeforeClass
 import org.junit.Test
+import java.lang.IllegalArgumentException
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class ConsentMetadataTest {
     companion object {
@@ -41,13 +43,13 @@ class ConsentMetadataTest {
     fun `ConsentMetadata period serialises correctly`() {
         val m1 = sdm()
 
-        assertEquals(LocalDate.now(), m1.period!!.validFrom)
-        assertEquals(LocalDate.now().plusDays(1), m1.period!!.validTo)
+        assertEquals(LocalDate.now(), m1.period.validFrom)
+        assertEquals(LocalDate.now().plusDays(1), m1.period.validTo)
     }
 
     @Test
     fun `ConsentMetadata domain serialises correctly`() {
-        assertEquals(Domain.MEDICAL, sdm().domain!!.first())
+        assertEquals(Domain.MEDICAL, sdm().domain.first())
     }
 
     @Test
@@ -59,19 +61,78 @@ class ConsentMetadataTest {
     fun `ConsentMetadata symmetric key serialises correctly`() {
         val m1 = sdm()
 
-        assertEquals("AES_GCM_256", m1.secureKey!!.alg)
-        assertEquals("567898==", m1.secureKey!!.iv)
+        assertEquals("AES_GCM_256", m1.secureKey.alg)
+        assertEquals("567898==", m1.secureKey.iv)
     }
 
     @Test
     fun `ConsentMetadata asymmetric keys serialises correctly`() {
         val m1 = sdm()
 
-        assertEquals("RSA_3k", m1.organisationSecureKeys!!.first().alg)
-        assertEquals("123456==", m1.organisationSecureKeys!!.first().cipherText)
-        assertEquals("http://nuts.nl/naming/organisation#test", m1.organisationSecureKeys!!.first().legalEntityURI)
+        assertEquals("RSA_3k", m1.organisationSecureKeys.first().alg)
+        assertEquals("123456==", m1.organisationSecureKeys.first().cipherText)
+        assertEquals("http://nuts.nl/naming/organisation#test", m1.organisationSecureKeys.first().legalEntityURI)
 
     }
+
+    @Test(expected = Test.None::class)
+    fun `verify does not raise for valid ConsentMetadata`() {
+        val m1 = createMetadata()
+
+        m1.verify()
+    }
+
+    @Test
+    fun `verify raises for empty domain list`() {
+        // period
+        val period = Period(LocalDate.now(), LocalDate.now().plusDays(1))
+
+        // symmetric key
+        val secureKey = SymmetricKey("AES_GCM_256", "567898==")
+
+        // asymmetric keys
+        val assKey = ASymmetricKey("http://nuts.nl/naming/organisation#test", "RSA_3k", "123456==")
+
+        val m1 = ConsentMetadata(emptyList(), secureKey, listOf(assKey), "uuid", period)
+
+        assertFailsWith(IllegalArgumentException::class) {
+            m1.verify()
+        }
+    }
+
+    @Test
+    fun `verify raises for empty organisation secure keys`() {
+        // period
+        val period = Period(LocalDate.now(), LocalDate.now().plusDays(1))
+
+        // symmetric key
+        val secureKey = SymmetricKey("AES_GCM_256", "567898==")
+
+        val m1 = ConsentMetadata(listOf(Domain.MEDICAL), secureKey, emptyList(), "uuid", period)
+
+        assertFailsWith(IllegalArgumentException::class) {
+            m1.verify()
+        }
+    }
+
+    @Test
+    fun `verify raises for invalid period`() {
+        // period
+        val period = Period(LocalDate.now(), LocalDate.now().minusDays(1))
+
+        // symmetric key
+        val secureKey = SymmetricKey("AES_GCM_256", "567898==")
+
+        // asymmetric keys
+        val assKey = ASymmetricKey("http://nuts.nl/naming/organisation#test", "RSA_3k", "123456==")
+
+        val m1 = ConsentMetadata(listOf(Domain.MEDICAL), secureKey, listOf(assKey), "uuid", period)
+
+        assertFailsWith(IllegalArgumentException::class) {
+            m1.verify()
+        }
+    }
+
 
     // helper for standard serialize/deserialize
     private fun sdm() : ConsentMetadata {
@@ -80,33 +141,15 @@ class ConsentMetadataTest {
 
 
     private fun createMetadata() : ConsentMetadata {
-        val m1 = ConsentMetadata()
-
         // period
-        val period = Period()
-        m1.period = period
-        period.validFrom = LocalDate.now()
-        period.validTo = LocalDate.now().plusDays(1)
-
-        // domain
-        m1.domain = listOf(Domain.MEDICAL)
+        val period = Period(LocalDate.now(), LocalDate.now().plusDays(1))
 
         // symmetric key
-        val secureKey = SymmetricKey()
-        secureKey.alg = "AES_GCM_256"
-        secureKey.iv = "567898=="
-        m1.secureKey = secureKey
-
-        // previousAttachmentId
-        m1.previousAttachmentId = "uuid"
+        val secureKey = SymmetricKey("AES_GCM_256", "567898==")
 
         // asymmetric keys
-        val assKey = ASymmetricKey()
-        assKey.alg = "RSA_3k"
-        assKey.cipherText = "123456=="
-        assKey.legalEntityURI = "http://nuts.nl/naming/organisation#test"
-        m1.organisationSecureKeys = listOf(assKey)
+        val assKey = ASymmetricKey("http://nuts.nl/naming/organisation#test", "RSA_3k", "123456==")
 
-        return m1
+        return ConsentMetadata(listOf(Domain.MEDICAL), secureKey, listOf(assKey), "uuid", period)
     }
 }
