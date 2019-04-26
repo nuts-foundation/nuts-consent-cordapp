@@ -17,6 +17,14 @@
  *
  */
 
-rootProject.name = 'nuts-consent-cordapp'
-include 'contract'
-include 'flows'
+package nl.nuts.consent.model
+
+import com.fasterxml.jackson.annotation.JsonFormat
+
+@JsonFormat(shape = JsonFormat.Shape.STRING)
+enum class Domain {
+    MEDICAL,
+    PGO,
+    INSURANCE,
+    SOCIAL;
+}

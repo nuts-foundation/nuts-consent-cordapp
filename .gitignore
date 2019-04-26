@@ -9,3 +9,8 @@ _build
 build
 .gradle
 
+#MacOS
+.DS_Store
+
+#logging
+logs

@@ -17,6 +17,22 @@
  *
  */
 
-rootProject.name = 'nuts-consent-cordapp'
-include 'contract'
-include 'flows'
+package nl.nuts.consent.model
+
+import com.fasterxml.jackson.annotation.JsonProperty
+import net.corda.core.contracts.requireThat
+import java.time.LocalDate
+import javax.validation.constraints.NotNull
+
+data class Period (
+    @get:NotNull
+    @JsonProperty("validFrom") val validFrom: LocalDate,
+
+    @JsonProperty("validTo") val validTo: LocalDate? = null
+) {
+    fun verify() {
+        requireThat {
+            "validTo comes after valid From" using (validTo == null || validTo!!.isAfter(validFrom))
+        }
+    }
+}

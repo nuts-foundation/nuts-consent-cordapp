@@ -17,6 +17,18 @@
  *
  */
 
-rootProject.name = 'nuts-consent-cordapp'
-include 'contract'
-include 'flows'
+package nl.nuts.consent.state
+
+import net.corda.core.contracts.UniqueIdentifier
+import org.junit.Test
+import kotlin.test.assertEquals
+
+class ConsentStateTest {
+
+    @Test
+    fun `string representation of ConsentState is its externalID concatenated with its UUID`() {
+        val state = ConsentState(UniqueIdentifier("uuid"), emptyList())
+
+        assertEquals("${state.linearId.externalId}_${state.linearId.id}", state.toString())
+    }
+}

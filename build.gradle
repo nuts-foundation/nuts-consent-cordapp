@@ -24,6 +24,15 @@ buildscript {
         cordaGradlePluginsVersion = '4.0.25'
     }
 
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven {
+            url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/"
+        }
+    }
+
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
@@ -32,42 +41,38 @@ buildscript {
     }
 }
 
-plugins {
-    // Apply the Kotlin JVM plugin to add support for Kotlin on the JVM.
-    id 'org.jetbrains.kotlin.jvm' version '1.2.71'
-}
-
 ext {
-
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/"
-    }
-}
-
-// exclude unneeded libs
-configurations {
-    implementation {
-        exclude group: 'net.corda', module: 'corda-shell'
-        exclude group: 'net.corda', module: 'corda-tools-cliutils'
-        exclude group: 'com.github.bft-smart', module: 'library'
-        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
-    }
-
-    testImplementation {
-        exclude group: 'net.corda', module: 'corda-shell'
-        exclude group: 'net.corda', module: 'corda-tools-cliutils'
-        exclude group: 'com.github.bft-smart', module: 'library'
-        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
-    }
+    jacksonVersion = '2.9.8'
 }
 
 allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven {
+            url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/"
+        }
+    }
+
+    apply plugin: 'org.jetbrains.kotlin.jvm'
+    apply plugin: 'maven'
+    apply plugin: 'kotlin'
+    apply plugin: 'net.corda.plugins.cordapp'
+    apply plugin: 'jacoco'
+
+    cordapp.info.vendor = "Nuts community"
+
+    configurations {
+        implementation {
+            exclude group: 'net.corda', module: 'corda-tools-cliutils'
+            exclude group: 'com.github.corda.crash', module: 'crash.shell'
+            exclude group: 'com.github.corda.crash', module: 'crash.connectors.ssh'
+            exclude group: 'com.github.bft-smart', module: 'library'
+            exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+        }
+    }
+
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         kotlinOptions {
             languageVersion = "1.2"
@@ -76,23 +81,33 @@ allprojects {
             javaParameters = true   // Useful for reflection.
         }
     }
+    test {
+        jvmArgs "-javaagent:${project.rootDir}/lib/quasar.jar",
+                "-Dco.paralleluniverse.fibers.verifyInstrumentation=true"
+    }
 }
 
-apply plugin: 'net.corda.plugins.cordapp'
-apply plugin: 'net.corda.plugins.cordformation'
-
 dependencies {
-    // Use the Kotlin JDK 8 standard library.
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    cordapp project(":flows")
+}
 
-    implementation("net.corda:corda-node-api:$corda") {
-        exclude group: 'org.hibernate'
-        exclude group: 'co.paralleluniverse'
+task codeCoverageReport(type: JacocoReport) {
+    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+
+    reports {
+        xml.enabled true
+        xml.destination file("${buildDir}/reports/jacoco/report.xml")
+        html.enabled true
+        html.destination file("${buildDir}/reports/jacoco/html")
+        csv.enabled false
     }
-    implementation("net.corda:corda-node:$corda")
 
-    testImplementation("net.corda:corda-test-utils:$corda")
-    testImplementation("net.corda:corda-node-driver:$corda")
-    testImplementation 'org.jetbrains.kotlin:kotlin-test'
-    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
+    subprojects.each {
+        sourceSets it.sourceSets.main
+    }
+}
+
+//change to dependsOn check when IT are added
+codeCoverageReport.dependsOn {
+    subprojects*.test
 }

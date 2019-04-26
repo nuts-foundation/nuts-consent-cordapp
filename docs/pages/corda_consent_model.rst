@@ -28,7 +28,7 @@ Attachments referenced in a Nuts consent transaction contain two files:
 The *cipher_text.bin* file is the encrypted FHIR consent bundle and the metadata contains data on how to decrypt the file and three custom fields:
 
     - domain, denotes the target audience for this attachment: medical, PGO or insurance nodes
-    - previous_attachment_id, points to the previous attachment if the FHIR consent model has only be updated (increase of consent resource version)
+    - previousAttachmentId, points to the previous attachment if the FHIR consent model has only be updated (increase of consent resource version)
     - period, the only part of the FHIR consent record that is also available without encryption. This is done to prevent sending attachments to other parties when they have already expired.
 
 .. todo:
@@ -64,9 +64,13 @@ The updated record will also point towards the previous attachment so any party 
 Request/Accept state
 --------------------
 
-The creation or change of a *DPC* record is not a single transaction. Before a *DPC* record changes, a new *ConsentRequestState* needs to be created for the *DPC* record.
+The creation or change of a *DPC* record is not a single transaction. Before a *DPC* record changes, a new ``ConsentRequestState`` needs to be created for the *DPC* record.
 The involved parties will listen to these new states and will validate the attachments that come with it.
 When the attachments are validated, a new transaction is started by the receiver to accept the new request and update the *DPC* record.
+A big challenge with this flow is that the validation happens in *service space* and that the consent contract can not access the Nuts registry or validate that a certain public key is indeed the public key of a care organisation.
+Validation of public keys in service space is sufficient since all encryption is connected to the public keys from the registry.
+So any spoofed identities or wrong public keys will result in faulty encryption.
+In the case a ``ConsentRequestState`` is wrongly accepted and finalized by a malicious node, other nodes will still log an error on processing the *DPC* record since its public keys will be unknown. This will also prevent those nodes from decrypting and storing the *DPC* record.
 
 .. note:: Only one *ConsentRequestState* can exist per *DPC* record at any given time.
 

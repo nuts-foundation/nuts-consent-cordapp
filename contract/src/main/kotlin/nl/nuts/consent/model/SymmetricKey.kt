@@ -17,6 +17,15 @@
  *
  */
 
-rootProject.name = 'nuts-consent-cordapp'
-include 'contract'
-include 'flows'
+package nl.nuts.consent.model
+
+import com.fasterxml.jackson.annotation.JsonProperty
+import javax.validation.constraints.NotNull
+
+data class SymmetricKey (
+    @get:NotNull
+    @JsonProperty("alg") val alg: String,
+
+    @get:NotNull
+    @JsonProperty("iv") val iv: String
+)
