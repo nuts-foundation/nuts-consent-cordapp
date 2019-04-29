@@ -1,6 +1,6 @@
-**************
+##############
 nuts-discovery
-**************
+##############
 
 Discovery Consent Cordapp by the Nuts foundation for distributing Consent records across nodes.
 
@@ -18,7 +18,7 @@ Discovery Consent Cordapp by the Nuts foundation for distributing Consent record
 .. inclusion-marker-for-contribution
 
 Setup
-#####
+-----
 
 You'll need the sphinx jsson-schema plugin for generating the documentation:
 
@@ -27,3 +27,20 @@ You'll need the sphinx jsson-schema plugin for generating the documentation:
     pip install sphinx-jsonschema
 
 todo
+
+Release
+-------
+
+Both the flows and contract libs are published to maven central (through OSS Sonatype). Before you can release and sign the jars, you need the following things:
+
+- a valid gpg setup
+- a published gpg key
+- a sonatype account linked to nl.nuts
+
+You can release libraries through:
+
+.. sourcecode:: shell
+
+    ./gradlew uploadArchives
+
+Then go to https://oss.sonatype.org and *close* and *release* the libs. More info can be found on https://central.sonatype.org/pages/releasing-the-deployment.html.

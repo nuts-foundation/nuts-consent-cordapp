@@ -1,6 +1,7 @@
 # Intellij
 .idea
 *.iml
+out
 
 # Sphinx build
 _build

@@ -60,7 +60,10 @@ allprojects {
     apply plugin: 'kotlin'
     apply plugin: 'net.corda.plugins.cordapp'
     apply plugin: 'jacoco'
+    apply plugin: 'signing'
 
+    version = "0.1.0"
+    group = "nl.nuts.consent.cordapp"
     cordapp.info.vendor = "Nuts community"
 
     configurations {
@@ -84,6 +87,68 @@ allprojects {
     test {
         jvmArgs "-javaagent:${project.rootDir}/lib/quasar.jar",
                 "-Dco.paralleluniverse.fibers.verifyInstrumentation=true"
+    }
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from javadoc
+    }
+
+    task sourcesJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    artifacts {
+        archives javadocJar, sourcesJar
+    }
+
+    signing {
+        useGpgCmd()
+        sign configurations.archives
+    }
+
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+
+                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+
+                pom.project {
+                    name "${project.name}"
+                    description "Shared libs from the Nuts consent cordapp used in Nuts consent bridge"
+                    url "https://github.com/nuts-foundation/nuts-consent-cordapp/"
+                    packaging 'jar'
+
+                    scm {
+                        connection 'scm:git:https://github.com/nuts-foundation/nuts-consent-cordapp/'
+                        developerConnection 'scm:git:https://github.com/nuts-foundation/nuts-consent-cordapp/'
+                        url 'https://github.com/nuts-foundation/nuts-consent-cordapp/'
+                    }
+
+                    licenses {
+                        license {
+                            name 'GNU General Public License V3'
+                            url 'https://www.gnu.org/licenses/gpl-3.0.html'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id 'wout'
+                            name 'Wout Slakhorst'
+                            email 'wout.slakhorst@nuts.nl'
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

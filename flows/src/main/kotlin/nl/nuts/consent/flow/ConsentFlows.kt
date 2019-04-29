@@ -229,6 +229,7 @@ object ConsentRequestFlows {
     /**
      * Counter party flow for AcceptConsentRequest
      * All checks are done within the contract. This flow just checks if the right state is created.
+     * todo: naming
      */
     @InitiatedBy(AcceptConsentRequest::class)
     class AcceptAcceptConsentRequest(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {

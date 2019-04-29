@@ -32,7 +32,7 @@ data class Period (
 ) {
     fun verify() {
         requireThat {
-            "validTo comes after valid From" using (validTo == null || validTo!!.isAfter(validFrom))
+            "validTo comes after valid From" using (validTo == null || validTo.isAfter(validFrom))
         }
     }
 }

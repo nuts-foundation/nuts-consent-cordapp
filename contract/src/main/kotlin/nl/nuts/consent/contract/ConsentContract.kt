@@ -71,7 +71,7 @@ class ConsentContract : Contract {
         metadataList.forEach { it.verify() }
 
         // legalEntityURI in AttachmentSignature must match those in metadata
-        val attLegalEntityURISet = metadataList.map { itOuter -> itOuter.organisationSecureKeys!!.map { it.legalEntityURI } }.flatten()
+        val attLegalEntityURISet = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntityURI } }.flatten()
         val outputState = tx.outputStates.first()
         if (outputState is ConsentRequestState) {
             val consentRequestState : ConsentRequestState = outputState
