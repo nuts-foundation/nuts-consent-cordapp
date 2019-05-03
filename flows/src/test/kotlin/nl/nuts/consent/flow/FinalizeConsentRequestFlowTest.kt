@@ -77,7 +77,7 @@ class FinalizeConsentRequestFlowTest : GenericFlowTests() {
     }
 
     override fun runCorrectTransaction() : SignedTransaction {
-        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), listOf(b.info.singleIdentity()))
+        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), listOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
 

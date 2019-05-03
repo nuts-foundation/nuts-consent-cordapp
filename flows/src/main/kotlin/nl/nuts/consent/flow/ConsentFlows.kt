@@ -25,6 +25,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
@@ -52,7 +53,7 @@ object ConsentRequestFlows {
      */
     @InitiatingFlow
     @StartableByRPC
-    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val parties: List<Party>) : FlowLogic<SignedTransaction>() {
+    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val peers: List<CordaX500Name>) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -84,6 +85,9 @@ object ConsentRequestFlows {
         override fun call(): SignedTransaction {
             // Obtain a reference to the notary we want to use.
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
+
+            // names to Party
+            val parties = peers.map{ serviceHub.networkMapCache.getPeerByLegalName(it)!! }
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
