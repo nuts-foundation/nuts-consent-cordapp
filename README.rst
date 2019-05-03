@@ -1,6 +1,6 @@
-##############
-nuts-discovery
-##############
+####################
+nuts-consent-cordapp
+####################
 
 Discovery Consent Cordapp by the Nuts foundation for distributing Consent records across nodes.
 
