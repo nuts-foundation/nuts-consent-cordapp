@@ -107,9 +107,7 @@ allprojects {
 
         if (hasProperty('ossrhUsername')) {
             useGpgCmd()
-        } else {
-            signatory.keyId = "not_used"
-        }
+        }ßß
         sign configurations.archives
     }
 
