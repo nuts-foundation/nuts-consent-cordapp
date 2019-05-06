@@ -35,12 +35,6 @@ import kotlin.test.assertFailsWith
 class AcceptConsentRequestFlowTest : GenericFlowTests() {
     private var linearId : UniqueIdentifier? = null
 
-    init {
-        listOf(a, b).forEach {
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptNewConsentRequest::class.java)
-        }
-    }
-
     @Before
     override fun setup() {
         super.setup()

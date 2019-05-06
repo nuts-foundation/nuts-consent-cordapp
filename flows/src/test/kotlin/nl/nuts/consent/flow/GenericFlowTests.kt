@@ -48,7 +48,9 @@ abstract class GenericFlowTests {
 
     init {
         listOf(a, b).forEach {
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptNewConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentRequestFlows.NewConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentRequestFlows.AcceptConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentRequestFlows.FinalizeConsentRequest::class.java)
         }
     }
 
