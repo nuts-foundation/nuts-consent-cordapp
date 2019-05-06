@@ -107,7 +107,7 @@ allprojects {
 
         if (hasProperty('ossrhUsername')) {
             useGpgCmd()
-        }ßß
+        }
         sign configurations.archives
     }
 
