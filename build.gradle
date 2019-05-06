@@ -103,7 +103,7 @@ allprojects {
     }
 
     signing {
-        required { gradle.taskGraph.hasTask("uploadArchives") }
+        required { hasProperty('keyId') && gradle.taskGraph.hasTask("uploadArchives") }
         useGpgCmd()
         sign configurations.archives
     }
