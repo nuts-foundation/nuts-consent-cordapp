@@ -46,6 +46,14 @@ abstract class GenericFlowTests {
     protected val a = network.createPartyNode()
     protected val b = network.createPartyNode()
 
+    init {
+        listOf(a, b).forEach {
+            it.registerInitiatedFlow(ConsentRequestFlows.AcceptNewConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentRequestFlows.AcceptAcceptConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentRequestFlows.AcceptFinalizeConsentRequest::class.java)
+        }
+    }
+
     @Before
     open fun setup() {
         network.runNetwork()
