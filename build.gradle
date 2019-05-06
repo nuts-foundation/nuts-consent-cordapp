@@ -183,6 +183,6 @@ task codeCoverageReport(type: JacocoReport) {
 }
 
 //change to dependsOn check when IT are added
-codeCoverageReport.dependsOn {
-    subprojects*.test
-}
+//codeCoverageReport.dependsOn {
+//    subprojects*.test
+//}

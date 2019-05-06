@@ -2,8 +2,8 @@ language: java
 jdk:
   - oraclejdk8
 script:
-  - ./gradlew check --stacktrace
-  - ./gradlew codeCoverageReport
+  - ./gradlew check
+  - ./gradlew codeCoverageReport --stacktrace
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
   - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
