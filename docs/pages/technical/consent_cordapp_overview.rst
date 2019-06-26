@@ -1,7 +1,7 @@
-.. _nuts-consent-cordapp-overview:
+.. _nuts-consent-cordapp-technical-overview:
 
-Overview
-========
+Consent Cordapp Overview
+========================
 
 The key concepts of Corda are States, Contracts, Transactions and Flows. The chapters below gives a high level overview of how they are related.
 More information can be found at `The corda documentation <https://docs.corda.net/key-concepts.html>`_.
@@ -21,7 +21,7 @@ Duplicates are only a problem with the initial record, if a record already exist
 
 .. important::
 
-    The Nuts Corda Consent model represents :ref:`DPC records <nuts-consent-cordapp-dpc>`:
+    The Nuts Corda Consent model represents :ref:`DPC records <nuts-consent-cordapp-architecture-dpc>`:
         * The care provider responsible for storing the data (the custodian)
         * The patient (the subject)
         * The care provider that is granted access (the actor)
@@ -36,7 +36,7 @@ To ensure privacy, the symmetric key is encrypted with the public key of the inv
     When this is the case, extra attachments will be present containing the patient identifier for the PGO.
     The attachments that reference the official patient identifier (BSN) will be `hidden <https://docs.corda.net/key-concepts-tearoffs.html>`_ for the PGO.
 
-More information on the structure of the attachments can be read in the :ref:`nuts-consent-cordapp-model` chapter.
+More information on the structure of the attachments can be read in the :ref:`nuts-consent-cordapp-technical-model` chapter.
 
 Contracts
 ---------
@@ -55,7 +55,7 @@ Flows
 `Flows <https://docs.corda.net/key-concepts-flows.html>`_ are the main pieces of logic to create or update states.
 They are basically a step-by-step description on information gathering, sending data to other parties and finalising the transaction.
 Flows are distinguished into sending and receiving flows and can contain any number of sub-flows. The sub-flows allow for reuse of functionality.
-The current supported flows can be found in the :ref:`nuts-consent-cordapp-flows` chapter.
+The current supported flows can be found in the :ref:`nuts-consent-cordapp-technical-flows` chapter.
 
 Transactions
 ------------

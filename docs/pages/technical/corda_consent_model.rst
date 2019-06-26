@@ -1,4 +1,4 @@
-.. _nuts-consent-cordapp-model:
+.. _nuts-consent-cordapp-technical-model:
 
 Corda Consent Model
 ===================
@@ -18,7 +18,7 @@ Attachments
 `Corda attachments <https://docs.corda.net/tutorial-attachments.html>`_ are basically several files bundled in a single zip-file.
 They are not part of the transaction, but their hash is. It's cryptographically hard to change a file so that it has the same hash as a different piece of data (not enough energy in the universe type hard).
 Attachments can also be large since they'll contain an encrypted version of a FHIR bundle.
-Not having to send the data all the time can be a time saver. :ref:`Custom flow logic <nuts-consent-cordapp-flows>` is responsible for sending or requesting different attachments from another party within the same transaction.
+Not having to send the data all the time can be a time saver. :ref:`Custom flow logic <nuts-consent-cordapp-technical-flows>` is responsible for sending or requesting different attachments from another party within the same transaction.
 
 Attachments referenced in a Nuts consent transaction contain two files:
 
@@ -39,7 +39,7 @@ The *cipher_text.bin* file is the encrypted FHIR consent bundle and the metadata
 metadata.json schema
 --------------------
 
-.. jsonschema:: ../schemas/cordapp-consent.json
+.. jsonschema:: ../../_static/schemas/cordapp-consent.json
 
 Attachment lifecycle
 --------------------

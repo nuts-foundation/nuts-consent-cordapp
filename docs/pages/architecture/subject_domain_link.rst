@@ -1,9 +1,9 @@
-.. _nuts-consent-cordapp-sdl:
+.. _nuts-consent-cordapp-architecture-sdl:
 
 Subject Domain Link
 ===================
 
-Next to a :ref:`DPC record <nuts-consent-cordapp-dpc>`, Nuts also has a *Subject Domain Link* consent record.
+Next to a :ref:`DPC record <nuts-consent-cordapp-architecture-dpc>`, Nuts also has a *Subject Domain Link* consent record.
 This record represents the *link* a PGO (Personal Health care Environment) has to the medical domain.
 A *Subject Domain Link* represents the following parties:
 

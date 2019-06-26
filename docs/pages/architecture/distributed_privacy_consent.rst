@@ -1,6 +1,4 @@
-.. _nuts-consent-cordapp-dpc:
-
-.. todo: merge model and triple into one?
+.. _nuts-consent-cordapp-architecture-dpc:
 
 Distributed Privacy Consent
 ===========================
@@ -61,5 +59,5 @@ The above sections all use the professional to professional data transfer as sub
 The PGO though is not an actor and not a custodian, it represents the subject. So given a *Triple*, a PGO can be added as party to the consent record when it represents the patient.
 Any request a custodian API receives from a PGO user must therefore check the consent records for the patient identifier and not the actor.
 This way the patient can view and change the consent records as a party directly involved.
-For a PGO to view any medical data Nuts supports the notion of a :ref:`Subject Domain Link <nuts-consent-cordapp-sdl>`. Viewing any medical data in a PGO must be possible regardless of any consent records being available. A patient must be able to view their own data even without any consent registered.
+For a PGO to view any medical data Nuts supports the notion of a :ref:`Subject Domain Link <nuts-consent-cordapp-architecture-sdl>`. Viewing any medical data in a PGO must be possible regardless of any consent records being available. A patient must be able to view their own data even without any consent registered.
 Therefore the *Subject Domain Link* is a different structure than a *DPC* record.

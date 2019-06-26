@@ -1,12 +1,7 @@
-.. _nuts-consent-cordapp-flows:
+.. _nuts-consent-cordapp-technical-flows:
 
-Supported flows
-===============
-
-.. contents:: Flows:
-    :depth: 1
-    :local:
-
+Supported consent flows
+=======================
 
 New Consent Request
 -------------------
