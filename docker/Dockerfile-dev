@@ -1,0 +1,14 @@
+FROM openjdk:8-jdk-slim as builder
+LABEL maintainer="wout.slakhorst@nuts.nl"
+COPY / .
+RUN ./gradlew jar
+
+FROM openjdk:8-jre-slim
+RUN mkdir /opt/nuts
+ADD https://repo1.maven.org/maven2/net/corda/corda/4.0/corda-4.0.jar /opt/nuts/
+COPY --from=builder contract/build/libs/contract-0.2.0.jar /opt/nuts/cordapps/contract-0.2.0.jar
+COPY --from=builder flows/build/libs/flows-0.2.0.jar /opt/nuts/cordapps/flows-0.2.0.jar
+WORKDIR /opt/nuts
+ENTRYPOINT ["/usr/local/openjdk-8/bin/java"]
+CMD ["-jar", "/opt/nuts/corda-4.0.jar", "--network-root-truststore-password=changeit"]
+EXPOSE 7886 7887 7888 2222
