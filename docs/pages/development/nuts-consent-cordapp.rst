@@ -5,13 +5,13 @@ Nuts consent cordapp development
 
 .. marker-for-readme
 
-The discovery service is written in Kotlin and can be build by Gradle.
+The consent cordapp is written in Kotlin and can be build by Gradle.
 
 Dependencies
 ************
 
-Since the discovery service depends on Corda, Java 1.8 is needed. For the Oracle sdk, this means that your version needs to be > 1.8 update 151.
-This can give problems on several linux distro's. In that case use the latest OpenJDK sdk 1.8.
+Since the consent cordapp depends on Corda, Java 1.8 is needed. For the Oracle sdk, this means that your version needs to be > 1.8 update 151.
+This can give problems on several linux distro's. In that case use the latest OpenJDK 1.8.
 
 The project is build with Gradle. A gradle wrapper is present in the project.
 
