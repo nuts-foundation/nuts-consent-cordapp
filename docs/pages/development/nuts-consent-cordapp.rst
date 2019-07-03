@@ -63,6 +63,8 @@ If you haven't created a docker network yet, create one to to able to connect th
 
     docker network create -d bridge nuts
 
+You might have to start the notary twice, since the network parameters change when the notary changes.
+
 README
 ******
 
