@@ -42,28 +42,7 @@ To build locally
 
     docker build . -f docker/Dockerfile-dev
 
-The ``nutsfoundation/nuts-consent-cordapp:latest-dev`` docker image can be used to run 3 nodes locally. It's important to mount the different files from ``docker/nodes/x``
-
-.. code-block:: shell
-
-    docker run -it -p 7886:7886 -p 7887:7887 -p 7888:7888 -p 2222:2222 \
-        --network=nuts --name=notary
-        -v /home/user/nuts-consent-cordapp/docker/nodes/notary/node.conf:/opt/nuts/node.conf \
-        -v /home/user/nuts-consent-cordapp/docker/nodes/notary/certificates:/opt/nuts/certificates \
-        --rm
-        nutsfoundation/nuts-consent-cordapp:latest-dev
-
-The ports need to be changed for the other two containers. Port ``7886`` is the main port for p2p traffic. ``7887`` is used for rpc calls and ``2222`` is used to ssh into the node. Change the mounted paths to reflect your machine configuration. the ``--name`` param should match the directory name from which ``node.conf`` is mounted.
-
-This image requires the ``nutsfoundation/nuts-discovery`` image to be running in a container exposed at ``8080``.
-
-If you haven't created a docker network yet, create one to to able to connect the containers together:
-
-.. code-block:: shell
-
-    docker network create -d bridge nuts
-
-You might have to start the notary twice, since the network parameters change when the notary changes.
+The ``nutsfoundation/nuts-consent-cordapp:latest-dev`` docker image can be used to run 3 nodes locally. Checkout :ref:`nuts-network-local-development-docker` for setting up a complete environment with ``docker-compose``.
 
 README
 ******
