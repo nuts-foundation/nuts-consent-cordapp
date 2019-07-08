@@ -66,7 +66,7 @@ allprojects {
     apply plugin: 'jacoco'
     apply plugin: 'signing'
 
-    version = "0.2.0"
+    version = "0.3.0"
     group = "nl.nuts.consent.cordapp"
     cordapp.info.vendor = "Nuts community"
 
@@ -122,15 +122,15 @@ allprojects {
 
                 repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
                     authentication(
-                            userName: hasProperty('ossrhUsername') ? ossrhUsername : "not_used",
-                            password: hasProperty('ossrhPassword') ? ossrhPassword : "not_used",
+                            userName: ossrhUsername ? ossrhUsername : "not_used",
+                            password: ossrhPassword ? ossrhPassword : "not_used",
                     )
                 }
 
                 snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
                     authentication(
-                            userName: hasProperty('ossrhUsername') ? ossrhUsername : "not_used",
-                            password: hasProperty('ossrhPassword') ? ossrhPassword : "not_used",
+                            userName: ossrhUsername ? ossrhUsername : "not_used",
+                            password: ossrhPassword ? ossrhPassword : "not_used",
                     )
                 }
 
