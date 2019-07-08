@@ -109,7 +109,7 @@ allprojects {
     signing {
         required { gradle.taskGraph.hasTask("uploadArchives") }
 
-        if (hasProperty('ossrhUsername')) {
+        if (project.hasProperty('ossrhUsername')) {
             useGpgCmd()
         }
         sign configurations.archives
