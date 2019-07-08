@@ -116,21 +116,26 @@ allprojects {
     }
 
     uploadArchives {
+        if (!project.hasProperty('ossrhUsername')) {
+            project.ext.ossrhUsername = "not_used"
+            project.ext.ossrhPassword = "not_used"
+        }
+
         repositories {
             mavenDeployer {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
                 repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
                     authentication(
-                            userName: ossrhUsername ? ossrhUsername : "not_used",
-                            password: ossrhPassword ? ossrhPassword : "not_used",
+                            userName: project.properties['ossrhUsername'],
+                            password: project.properties['ossrhPassword'],
                     )
                 }
 
                 snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
                     authentication(
-                            userName: ossrhUsername ? ossrhUsername : "not_used",
-                            password: ossrhPassword ? ossrhPassword : "not_used",
+                            userName: project.properties['ossrhUsername'],
+                            password: project.properties['ossrhPassword'],
                     )
                 }
 
