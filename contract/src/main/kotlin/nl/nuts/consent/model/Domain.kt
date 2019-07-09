@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonFormat
 
 @JsonFormat(shape = JsonFormat.Shape.STRING)
 enum class Domain {
-    MEDICAL,
-    PGO,
-    INSURANCE,
-    SOCIAL;
+    medical,
+    pgo,
+    insurance,
+    social;
 }

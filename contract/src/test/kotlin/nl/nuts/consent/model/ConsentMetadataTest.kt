@@ -49,7 +49,7 @@ class ConsentMetadataTest {
 
     @Test
     fun `ConsentMetadata domain serialises correctly`() {
-        assertEquals(Domain.MEDICAL, sdm().domain.first())
+        assertEquals(Domain.medical, sdm().domain.first())
     }
 
     @Test
@@ -108,7 +108,7 @@ class ConsentMetadataTest {
         // symmetric key
         val secureKey = SymmetricKey("AES_GCM_256", "567898==")
 
-        val m1 = ConsentMetadata(listOf(Domain.MEDICAL), secureKey, emptyList(), "uuid", period)
+        val m1 = ConsentMetadata(listOf(Domain.medical), secureKey, emptyList(), "uuid", period)
 
         assertFailsWith(IllegalArgumentException::class) {
             m1.verify()
@@ -126,7 +126,7 @@ class ConsentMetadataTest {
         // asymmetric keys
         val assKey = ASymmetricKey("http://nuts.nl/naming/organisation#test", "RSA_3k", "123456==")
 
-        val m1 = ConsentMetadata(listOf(Domain.MEDICAL), secureKey, listOf(assKey), "uuid", period)
+        val m1 = ConsentMetadata(listOf(Domain.medical), secureKey, listOf(assKey), "uuid", period)
 
         assertFailsWith(IllegalArgumentException::class) {
             m1.verify()
@@ -150,6 +150,6 @@ class ConsentMetadataTest {
         // asymmetric keys
         val assKey = ASymmetricKey("http://nuts.nl/naming/organisation#test", "RSA_3k", "123456==")
 
-        return ConsentMetadata(listOf(Domain.MEDICAL), secureKey, listOf(assKey), "uuid", period)
+        return ConsentMetadata(listOf(Domain.medical), secureKey, listOf(assKey), "uuid", period)
     }
 }
