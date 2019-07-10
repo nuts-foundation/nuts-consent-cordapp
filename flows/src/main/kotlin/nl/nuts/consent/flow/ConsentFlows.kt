@@ -54,7 +54,7 @@ object ConsentRequestFlows {
      */
     @InitiatingFlow
     @StartableByRPC
-    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val legalEntities: List<String>, val signature:AttachmentSignature, val peers: List<CordaX500Name>) : FlowLogic<SignedTransaction>() {
+    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val legalEntities: List<String>, val peers: List<CordaX500Name>) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -93,7 +93,7 @@ object ConsentRequestFlows {
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val consentRequestState = ConsentRequestState(externalId, attachments, legalEntities, listOf(signature), parties + serviceHub.myInfo.legalIdentities.first())
+            val consentRequestState = ConsentRequestState(externalId, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
             val txCommand = Command(ConsentContract.ConsentCommands.CreateRequest(), consentRequestState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addOutputState(consentRequestState, ConsentContract.CONTRACT_ID)

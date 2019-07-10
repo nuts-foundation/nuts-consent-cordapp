@@ -80,8 +80,7 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
     }
 
     override fun runCorrectTransaction() : SignedTransaction {
-        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, a.services.keyManagementService.sign(validHash!!.bytes,a.info.legalIdentities.first().owningKey))
-        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), emptyList(), attSig, listOf(b.info.singleIdentity().name))
+        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), emptyList(), listOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()
