@@ -55,7 +55,7 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
     @Test
     fun `recorded transaction has a single input, a single output and a single attachment`() {
         // we create a signature with the key of a Corda Party. But this must be a Nuts party (care provider)
-        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, a.services.keyManagementService.sign(validHash!!.bytes, a.info.legalIdentities.first().owningKey))
+        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, b.services.keyManagementService.sign(validHash!!.bytes, b.info.legalIdentities.first().owningKey))
 
         val flow = ConsentRequestFlows.AcceptConsentRequest(linearId!!, listOf(attSig))
         val future = a.startFlow(flow)
@@ -80,7 +80,8 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
     }
 
     override fun runCorrectTransaction() : SignedTransaction {
-        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), listOf(b.info.singleIdentity().name))
+        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, a.services.keyManagementService.sign(validHash!!.bytes,a.info.legalIdentities.first().owningKey))
+        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), emptyList(), attSig, listOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

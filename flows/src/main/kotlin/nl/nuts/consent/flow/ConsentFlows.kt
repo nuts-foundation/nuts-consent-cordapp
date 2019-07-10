@@ -49,11 +49,12 @@ object ConsentRequestFlows {
      *
      * @param externalId the HMAC (using custodian SK) of the patient record
      * @param attachments hashes of attachments containing the consent records
+     * @param legalEntities list of involved parties, also present in metadata. This is just to help other parts of the node to quickly filter if action is needed
      * @param parties Other nodes involved in transaction (excluding this one)
      */
     @InitiatingFlow
     @StartableByRPC
-    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val peers: List<CordaX500Name>) : FlowLogic<SignedTransaction>() {
+    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val legalEntities: List<String>, val signature:AttachmentSignature, val peers: List<CordaX500Name>) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -92,7 +93,7 @@ object ConsentRequestFlows {
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val consentRequestState = ConsentRequestState(externalId, attachments, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
+            val consentRequestState = ConsentRequestState(externalId, attachments, legalEntities, listOf(signature), parties + serviceHub.myInfo.legalIdentities.first())
             val txCommand = Command(ConsentContract.ConsentCommands.CreateRequest(), consentRequestState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addOutputState(consentRequestState, ConsentContract.CONTRACT_ID)
@@ -143,7 +144,7 @@ object ConsentRequestFlows {
      * Flow for accepting a ConsentRequestState
      *
      * @param externalId the HMAC (using custodian SK) of the patient record, must be same as the new consent request state
-     * @param approvedSigs signatures of involved parties
+     * @param approvedSigs new signatures of involved parties
      */
     @InitiatingFlow
     @StartableByRPC

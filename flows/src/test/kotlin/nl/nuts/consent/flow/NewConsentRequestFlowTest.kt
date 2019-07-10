@@ -22,6 +22,7 @@ package nl.nuts.consent.flow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
+import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.state.ConsentRequestState
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -64,7 +65,8 @@ class NewConsentRequestFlowTest : GenericFlowTests() {
 //    }
 
     override fun runCorrectTransaction() : SignedTransaction {
-        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), listOf(b.info.singleIdentity().name))
+        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, a.services.keyManagementService.sign(validHash!!.bytes,a.info.legalIdentities.first().owningKey))
+        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), emptyList(), attSig, listOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

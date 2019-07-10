@@ -34,18 +34,21 @@ import nl.nuts.consent.contract.AttachmentSignature
  * @param consentStateExternalId the external id of the ConsentState record
  * @param attachments list of attachment hashes that need to be present at each transaction
  * @param signatures list of Party signatures representing parties that have completed checks against the encrypted attachment
+ * @param legalEntities list of legal entities mentioned in the consent resource and must be involved in signing
  * @param parties involved parties
  */
 @BelongsToContract(ConsentContract::class)
 data class ConsentRequestState(val consentStateUUID: UniqueIdentifier,
                                val attachments: Set<SecureHash>,
+                               val legalEntities: List<String>,
                                val signatures: List<AttachmentSignature>,
                                val parties: List<Party> = ArrayList()) : LinearState {
 
     constructor(externalId: String,
                 attachments: Set<SecureHash>,
+                legalEntities: List<String>,
                 signatures: List<AttachmentSignature>,
-                parties: List<Party>) : this(UniqueIdentifier(externalId), attachments, signatures, parties)
+                parties: List<Party>) : this(UniqueIdentifier(externalId), attachments, legalEntities, signatures, parties)
 
     override val linearId: UniqueIdentifier get() = consentStateUUID
     override val participants: List<Party> get() = parties

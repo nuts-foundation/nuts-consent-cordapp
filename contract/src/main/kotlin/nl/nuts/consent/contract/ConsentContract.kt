@@ -22,9 +22,6 @@ package nl.nuts.consent.contract
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.*
-import net.corda.core.contracts.Requirements.using
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.LedgerTransaction
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentRequestState
@@ -33,7 +30,6 @@ import java.lang.IllegalStateException
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.jar.JarEntry
-import java.util.zip.ZipEntry
 
 /**
  * The consent contract. It validates state transitions based on various commands.
@@ -42,7 +38,6 @@ class ConsentContract : Contract {
     companion object {
         // Used to identify our contract when building a transaction.
         const val CONTRACT_ID = "nl.nuts.consent.contract.ConsentContract"
-
     }
 
     object Serialisation {
@@ -70,13 +65,13 @@ class ConsentContract : Contract {
         // raises IllegalState when invalid with correct message
         metadataList.forEach { it.verify() }
 
-        // legalEntityURI in AttachmentSignature must match those in metadata
-        val attLegalEntityURISet = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntityURI } }.flatten()
+        // legalEntity in AttachmentSignature must match those in metadata
+        val attLegalEntityURISet = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntity } }.flatten()
         val outputState = tx.outputStates.first()
         if (outputState is ConsentRequestState) {
             val consentRequestState : ConsentRequestState = outputState
             if (!consentRequestState.signatures.map { it.legalEntityURI }.all { attLegalEntityURISet.contains(it) }) {
-                throw IllegalArgumentException("unknown legalEntityURI found in attachmentSignatures, not present in attachments")
+                throw IllegalArgumentException("unknown legalEntity found in attachmentSignatures, not present in attachments")
             }
         }
     }

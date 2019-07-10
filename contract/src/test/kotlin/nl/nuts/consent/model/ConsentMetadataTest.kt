@@ -71,7 +71,7 @@ class ConsentMetadataTest {
 
         assertEquals("RSA_3k", m1.organisationSecureKeys.first().alg)
         assertEquals("123456==", m1.organisationSecureKeys.first().cipherText)
-        assertEquals("http://nuts.nl/naming/organisation#test", m1.organisationSecureKeys.first().legalEntityURI)
+        assertEquals("http://nuts.nl/naming/organisation#test", m1.organisationSecureKeys.first().legalEntity)
 
     }
 

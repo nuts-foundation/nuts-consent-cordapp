@@ -1,12 +1,12 @@
 {
-  "domain": ["MEDICAL"],
+  "domain": ["medical"],
   "secureKey": {
     "alg": "AES_GCM_256",
     "iv": "123456=="
   },
   "organisationSecureKeys": [
     {
-      "legalEntityURI": "http://nuts.nl/naming/organisation#test",
+      "legalEntity": "http://nuts.nl/naming/organisation#test",
       "alg": "RSA_3k",
       "cipherText": "123456=="
     }
