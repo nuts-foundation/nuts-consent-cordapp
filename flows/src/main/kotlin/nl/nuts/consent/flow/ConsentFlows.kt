@@ -88,7 +88,7 @@ object ConsentRequestFlows {
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
             // names to Party
-            val parties = peers.map{ serviceHub.networkMapCache.getPeerByLegalName(it)!! }.toMutableSet()
+            val parties = peers.map{ serviceHub.networkMapCache.getPeerByLegalName(it)!! }.toMutableSet() - serviceHub.myInfo.legalIdentities.first()
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
