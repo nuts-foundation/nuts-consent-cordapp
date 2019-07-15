@@ -54,7 +54,7 @@ object ConsentRequestFlows {
      */
     @InitiatingFlow
     @StartableByRPC
-    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val legalEntities: List<String>, val peers: List<CordaX500Name>) : FlowLogic<SignedTransaction>() {
+    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -88,7 +88,7 @@ object ConsentRequestFlows {
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
             // names to Party
-            val parties = peers.map{ serviceHub.networkMapCache.getPeerByLegalName(it)!! }
+            val parties = peers.map{ serviceHub.networkMapCache.getPeerByLegalName(it)!! }.toMutableSet()
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION

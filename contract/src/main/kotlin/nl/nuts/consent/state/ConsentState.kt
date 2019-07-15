@@ -32,10 +32,10 @@ import net.corda.core.serialization.CordaSerializable
  * @param parties all involved parties
  */
 @CordaSerializable
-data class ConsentState(val consentStateUUID: UniqueIdentifier, val parties: List<Party> = ArrayList()) : LinearState {
+data class ConsentState(val consentStateUUID: UniqueIdentifier, val parties: Set<Party> = emptySet()) : LinearState {
 
     override val linearId: UniqueIdentifier get() = consentStateUUID
-    override val participants: List<Party> get() = parties
+    override val participants: List<Party> get() = parties.toList()
 
     override fun toString() = consentStateUUID.toString()
 }

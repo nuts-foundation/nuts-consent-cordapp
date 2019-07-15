@@ -40,18 +40,18 @@ import nl.nuts.consent.contract.AttachmentSignature
 @BelongsToContract(ConsentContract::class)
 data class ConsentRequestState(val consentStateUUID: UniqueIdentifier,
                                val attachments: Set<SecureHash>,
-                               val legalEntities: List<String>,
+                               val legalEntities: Set<String>,
                                val signatures: List<AttachmentSignature>,
-                               val parties: List<Party> = ArrayList()) : LinearState {
+                               val parties: Set<Party> = HashSet()) : LinearState {
 
     constructor(externalId: String,
                 attachments: Set<SecureHash>,
-                legalEntities: List<String>,
+                legalEntities: Set<String>,
                 signatures: List<AttachmentSignature>,
-                parties: List<Party>) : this(UniqueIdentifier(externalId), attachments, legalEntities, signatures, parties)
+                parties: Set<Party>) : this(UniqueIdentifier(externalId), attachments, legalEntities, signatures, parties)
 
     override val linearId: UniqueIdentifier get() = consentStateUUID
-    override val participants: List<Party> get() = parties
+    override val participants: List<Party> get() = parties.toList()
 
     override fun toString() = linearId.toString()
 }
