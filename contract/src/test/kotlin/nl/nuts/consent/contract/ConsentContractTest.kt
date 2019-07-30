@@ -210,7 +210,7 @@ class ConsentContractTest {
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, emptySet(), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -309,7 +309,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -330,11 +330,11 @@ class ConsentContractTest {
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, emptySet(), setOf(homeCare.party, generalCare.party))
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, emptySet(), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -363,7 +363,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -389,7 +389,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -397,6 +397,32 @@ class ConsentContractTest {
                         ConsentContract.ConsentCommands.FinalizeRequest()
                 )
                 verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `FinalizeRequest with missing attachments in out state`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = validAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(),
+                                listOf(createValidPAS(homeCare, attHash), createValidPAS(generalCare, attHash)), setOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentState(consentStateUuid, emptySet(), setOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.FinalizeRequest()
+                )
+                `fails with`("Attachments on output state are the same as input state")
             }
         }
     }
@@ -417,7 +443,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(unknownAttHash)
                 command(
@@ -468,7 +494,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -494,7 +520,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -520,7 +546,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -546,7 +572,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -571,7 +597,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -597,7 +623,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -700,7 +726,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(homeCare.party, generalCare.party))
+                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(

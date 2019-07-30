@@ -315,7 +315,7 @@ object ConsentRequestFlows {
 
             val currentStateRef = pages.states.first()
             val currentState = currentStateRef.state.data
-            val newState = ConsentState(currentState.consentStateUUID)
+            val newState = ConsentState(currentState.consentStateUUID, currentState.attachments)
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION

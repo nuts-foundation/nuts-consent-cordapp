@@ -234,6 +234,7 @@ class ConsentContract : Contract {
                 super.verifyAttachments(tx)
 
                 val inState = tx.inputsOfType<ConsentRequestState>().first()
+                val out = tx.outputsOfType<ConsentState>().first()
 
                 verifyAttachmentsWithState(tx, inState)
 
@@ -241,6 +242,8 @@ class ConsentContract : Contract {
                     // check if the right amount of attachments are present, given that no duplicate may exist, this is enough
                     // todo: what to do when a single node handles transactions for multiple participants?
                     "All signatures are present" using (inState.signatures.size == inState.participants.size * inState.attachments.size)
+                    "Attachments on output state are the same as input state" using ((inState.attachments - out.attachments).isEmpty())
+                    "Attachments on output state are the same as input state" using ((out.attachments - inState.attachments).isEmpty())
                 }
             }
         }

@@ -19,10 +19,13 @@
 
 package nl.nuts.consent.state
 
+import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
+import nl.nuts.consent.contract.ConsentContract
 
 /**
  * State representing the actual consent records. All data is stored as attachments.
@@ -32,7 +35,11 @@ import net.corda.core.serialization.CordaSerializable
  * @param parties all involved parties
  */
 @CordaSerializable
-data class ConsentState(val consentStateUUID: UniqueIdentifier, val parties: Set<Party> = emptySet()) : LinearState {
+@BelongsToContract(ConsentContract::class)
+data class ConsentState(
+        val consentStateUUID: UniqueIdentifier,
+        val attachments: Set<SecureHash>,
+        val parties: Set<Party> = emptySet()) : LinearState {
 
     override val linearId: UniqueIdentifier get() = consentStateUUID
     override val participants: List<Party> get() = parties.toList()
