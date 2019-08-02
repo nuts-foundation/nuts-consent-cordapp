@@ -26,7 +26,6 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
@@ -315,12 +314,13 @@ object ConsentRequestFlows {
 
             val currentStateRef = pages.states.first()
             val currentState = currentStateRef.state.data
-            val newState = ConsentState(currentState.consentStateUUID, currentState.attachments)
+            val newState = ConsentState(consentStateUUID = currentState.consentStateUUID,
+                    attachments = currentState.attachments, parties = currentState.parties)
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val txCommand = Command(ConsentContract.ConsentCommands.FinalizeRequest(), currentState.participants.map { it.owningKey })
+            val txCommand = Command(ConsentContract.ConsentCommands.FinalizeRequest(), newState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(currentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
@@ -364,6 +364,5 @@ object ConsentRequestFlows {
 
             return subFlow(ReceiveFinalityFlow(askingPartySession, expectedTxId = txId))
         }
-
     }
 }

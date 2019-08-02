@@ -73,6 +73,7 @@ class FinalizeConsentRequestFlowTest : GenericFlowTests() {
 
             val recordedState = txOutputs[0].data as ConsentState
             assertEquals("uuid", recordedState.consentStateUUID.externalId)
+            assertEquals(setOf(a, b).map{it.info.singleIdentity()}.toSet(), recordedState.parties)
         }
     }
 
