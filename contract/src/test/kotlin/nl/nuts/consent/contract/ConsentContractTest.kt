@@ -56,7 +56,7 @@ class ConsentContractTest {
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -156,7 +156,7 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `CreateRequest valid transaction`() {
+    fun `GenericRequest must have same legalEntities as listed in metadata`() {
         ledgerServices.ledger {
             val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
@@ -165,6 +165,48 @@ class ConsentContractTest {
                 output(
                         ConsentContract.CONTRACT_ID,
                         ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.GenericRequest()
+                )
+                `fails with`("legal entities in attachments do not match those in consentRequestState")
+            }
+        }
+    }
+
+    @Test
+    fun `GenericRequest must have same legalEntities as listed in metadata 2`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = validAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test", "b"), emptyList(), setOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.GenericRequest()
+                )
+                `fails with`("legal entities in attachments do not match those in consentRequestState")
+            }
+        }
+    }
+
+    @Test
+    fun `CreateRequest valid transaction`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = validAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -179,7 +221,7 @@ class ConsentContractTest {
     @Test
     fun `CreateRequest must have no inputs`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -189,7 +231,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -204,7 +246,7 @@ class ConsentContractTest {
     @Test
     fun `CreateRequest must only have ConsentRequestState as output`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -225,13 +267,13 @@ class ConsentContractTest {
     @Test
     fun `CreateRequest must at least have 1 attachment in state`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, emptySet(), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                        ConsentRequestState(consentStateUuid, emptySet(), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -246,7 +288,7 @@ class ConsentContractTest {
     @Test
     fun `CreateRequest attachments must be the same for state and transaction`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             val unknownAttachmentInputStream = unknownAttachment.inputStream()
@@ -255,40 +297,12 @@ class ConsentContractTest {
             transaction {
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                        ConsentRequestState(consentStateUuid, setOf(unknownAttHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
-                attachment(unknownAttHash)
+                attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
                         ConsentContract.ConsentCommands.CreateRequest()
-                )
-                `fails with`("All attachments in state are include in the transaction")
-            }
-        }
-    }
-
-    @Test
-    fun `AcceptRequest attachments must be the same for state and transaction`() {
-        ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
-
-            val unknownAttachmentInputStream = unknownAttachment.inputStream()
-            val unknownAttHash = attachment(unknownAttachmentInputStream)
-
-            transaction {
-                input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
-                )
-                output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
-                )
-                attachment(unknownAttHash)
-                command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
                 )
                 `fails with`("All attachments in state are include in the transaction")
             }
@@ -428,34 +442,6 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `FinalizeRequest attachments must be the same for state and transaction`() {
-        ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
-
-            val unknownAttachmentInputStream = unknownAttachment.inputStream()
-            val unknownAttHash = attachment(unknownAttachmentInputStream)
-
-            transaction {
-                input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
-                )
-                output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
-                )
-                attachment(unknownAttHash)
-                command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
-                )
-                `fails with`("All attachments in state are include in the transaction")
-            }
-        }
-    }
-
-    @Test
     fun `FinalizeRequest only produces ConsentStates`() {
         ledgerServices.ledger {
             val attachmentInputStream = dummyAttachment.inputStream()
@@ -483,7 +469,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest requires complete list of AttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -535,7 +521,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest requires unique set of AttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -561,7 +547,7 @@ class ConsentContractTest {
     @Test
     fun `FinalizeRequest requires valid set of AttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -585,34 +571,9 @@ class ConsentContractTest {
     }
 
     @Test
-    fun `FinalizeRequest transaction must have same set of attachments as output state`() {
-        ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
-
-            transaction {
-                input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, emptySet(), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
-                )
-                output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, setOf(attHash), setOf(homeCare.party, generalCare.party))
-                )
-                attachment(attHash)
-                command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
-                )
-                `fails with`("Attachments in state have the same amount as include in the transaction")
-            }
-        }
-    }
-
-    @Test
     fun `FinalizeRequest only accepts AttachmentSignatures from involved parties`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -644,11 +605,11 @@ class ConsentContractTest {
             transaction {
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
                                 listOf(createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
@@ -674,7 +635,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
                                 listOf(createPASWrongIdentity(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
@@ -690,7 +651,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest transaction must have same set of attachments as output state`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -700,7 +661,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, emptySet(), emptySet(),
+                        ConsentRequestState(consentStateUuid, emptySet(), setOf("http://nuts.nl/naming/organisation#test"),
                                 listOf(createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
@@ -716,7 +677,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest only creates ConsentRequestStates`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -741,7 +702,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest requires more attachments on output than input`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -751,7 +712,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
@@ -777,7 +738,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
                                 listOf(createValidPAS(homeCare, SecureHash.allOnesHash)), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
@@ -793,7 +754,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest requires unique set of AttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -804,7 +765,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentRequestState(consentStateUuid, setOf(attHash),setOf("http://nuts.nl/naming/organisation#test"),
                                 listOf(createValidPAS(generalCare, attHash), createValidPAS(generalCare, attHash)), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
@@ -820,7 +781,7 @@ class ConsentContractTest {
     @Test
     fun `AcceptRequest requires valid set of AttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = dummyAttachment.inputStream()
+            val attachmentInputStream = validAttachment.inputStream()
             val attHash = attachment(attachmentInputStream)
 
             transaction {
@@ -831,7 +792,7 @@ class ConsentContractTest {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentRequestState(consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentRequestState(consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
                                 listOf(createPASWrongSignature(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)

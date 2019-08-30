@@ -58,40 +58,6 @@ class ConsentContract : Contract {
 
         // verification delegated to specific commands
         command.value.verifyStates(tx)
-
-        // verification of metadata contents
-        val consentAttachments = tx.attachments.filter{ it !is ContractAttachment }
-        val metadataList = consentAttachments.map {extractMetadata(it)}
-        // raises IllegalState when invalid with correct message
-        metadataList.forEach { it.verify() }
-
-        // legalEntity in AttachmentSignature must match those in metadata
-        val attLegalEntityURISet = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntity } }.flatten()
-        val outputState = tx.outputStates.first()
-        if (outputState is ConsentRequestState) {
-            val consentRequestState : ConsentRequestState = outputState
-            if (!consentRequestState.signatures.map { it.legalEntityURI }.all { attLegalEntityURISet.contains(it) }) {
-                throw IllegalArgumentException("unknown legalEntity found in attachmentSignatures, not present in attachments")
-            }
-        }
-    }
-
-    private fun extractMetadata(attachment: Attachment) : ConsentMetadata {
-        val inStream = attachment.openAsJAR()
-        var entry: JarEntry = inStream.nextJarEntry
-
-        try {
-            while (!entry.name.endsWith("json")) {
-                entry = inStream.nextJarEntry
-            }
-        }
-        catch(e :IllegalStateException) {
-            throw IllegalStateException("Attachment is missing required metadata file")
-        }
-
-        val reader = inStream.bufferedReader(Charset.forName("UTF8"))
-
-        return Serialisation.objectMapper().readValue(reader, ConsentMetadata::class.java)
     }
 
     // Used to indicate the transaction's intent.
@@ -132,6 +98,47 @@ class ConsentContract : Contract {
                 requireThat {
                     "There must at least be 1 attachment" using (attachments.isNotEmpty())
                 }
+
+                val metadataList = attachments.map {extractMetadata(it)}
+                // raises IllegalState when invalid with correct message
+                metadataList.forEach { it.verify() }
+
+                val outputState = tx.outputStates.first()
+
+                val legalEntsPerAtt = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntity } }
+
+                if (outputState is ConsentRequestState) {
+                    // legalEntity in AttachmentSignature must match those in metadata
+                    val consentRequestState : ConsentRequestState = outputState
+                    if (!consentRequestState.signatures.map { it.legalEntityURI }.all { legalEntsPerAtt.flatten().contains(it) }) {
+                        throw IllegalArgumentException("unknown legalEntity found in attachmentSignatures, not present in attachments")
+                    }
+
+                    // legalEntities in metadata must match the list in the output state
+                    legalEntsPerAtt.forEach {
+                        requireThat {
+                            "legal entities in attachments do not match those in consentRequestState" using (consentRequestState.legalEntities.toTypedArray().contentDeepEquals(it.toTypedArray()))
+                        }
+                    }
+                }
+            }
+
+            protected fun extractMetadata(attachment: Attachment) : ConsentMetadata {
+                val inStream = attachment.openAsJAR()
+                var entry: JarEntry = inStream.nextJarEntry
+
+                try {
+                    while (!entry.name.endsWith("json")) {
+                        entry = inStream.nextJarEntry
+                    }
+                }
+                catch(e :IllegalStateException) {
+                    throw IllegalStateException("Attachment is missing required metadata file")
+                }
+
+                val reader = inStream.bufferedReader(Charset.forName("UTF8"))
+
+                return Serialisation.objectMapper().readValue(reader, ConsentMetadata::class.java)
             }
         }
 
