@@ -68,7 +68,7 @@ class ConsentContract : Contract {
         /**
          * Generic checks valid for all different commands
          */
-        open class GenericRequest : ConsentCommands {
+        open class GenericCommand : ConsentCommands {
             override fun verifyStates(tx: LedgerTransaction) {
                 verifyInputState(tx)
                 verifyOutputState(tx)
@@ -145,7 +145,7 @@ class ConsentContract : Contract {
         /**
          * Abstract class with ConsentRequestState as input
          */
-        open class ProcessRequest : GenericRequest() {
+        open class ProcessCommand : GenericCommand() {
             override fun verifyInputState(tx: LedgerTransaction) {
                 requireThat {
                     "The right amount of states are consumed" using (tx.inputs.size == 1)
@@ -179,7 +179,7 @@ class ConsentContract : Contract {
         /**
          * Initiate a new request for a new consentState
          */
-        class CreateRequest : GenericRequest() {
+        class CreateCommand : GenericCommand() {
             override fun verifyStates(tx: LedgerTransaction) {
                 super.verifyStates(tx)
                 val txAttachments = tx.attachments.filter { it !is ContractAttachment }
@@ -199,7 +199,7 @@ class ConsentContract : Contract {
         /**
          * Command for a Party to signal that it verified the encrypted contents
          */
-        class AcceptRequest : ProcessRequest() {
+        class AcceptCommand : ProcessCommand() {
             override fun verifyOutputState(tx: LedgerTransaction) {
                 super.verifyOutputState(tx)
 
@@ -228,7 +228,7 @@ class ConsentContract : Contract {
          * Command to finalize the request. All parties have done additional checks on the encrypted attachment data
          *
          */
-        class FinalizeRequest : ProcessRequest() {
+        class FinalizeCommand : ProcessCommand() {
             override fun verifyOutputState(tx: LedgerTransaction) {
                 super.verifyOutputState(tx)
 

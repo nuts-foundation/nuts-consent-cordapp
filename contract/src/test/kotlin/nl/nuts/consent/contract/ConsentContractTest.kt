@@ -61,7 +61,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.GenericRequest()
+                        ConsentContract.ConsentCommands.GenericCommand()
                 )
                 verifies()
             }
@@ -82,7 +82,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.GenericRequest()
+                        ConsentContract.ConsentCommands.GenericCommand()
                 )
                 `fails with`("Attachment is missing required metadata file")
             }
@@ -103,7 +103,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey),
-                        ConsentContract.ConsentCommands.GenericRequest()
+                        ConsentContract.ConsentCommands.GenericCommand()
                 )
                 `fails with`("All participants must be signers")
             }
@@ -128,7 +128,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.GenericRequest()
+                        ConsentContract.ConsentCommands.GenericCommand()
                 )
                 `fails with`("The right amount of states are created")
             }
@@ -148,7 +148,7 @@ class ConsentContractTest {
                 )
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.GenericRequest()
+                        ConsentContract.ConsentCommands.GenericCommand()
                 )
                 `fails with`("There must at least be 1 attachment")
             }
@@ -169,7 +169,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.GenericRequest()
+                        ConsentContract.ConsentCommands.GenericCommand()
                 )
                 `fails with`("legal entities in attachments do not match those in consentRequestState")
             }
@@ -190,7 +190,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.GenericRequest()
+                        ConsentContract.ConsentCommands.GenericCommand()
                 )
                 `fails with`("legal entities in attachments do not match those in consentRequestState")
             }
@@ -211,7 +211,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.CreateRequest()
+                        ConsentContract.ConsentCommands.CreateCommand()
                 )
                 verifies()
             }
@@ -236,7 +236,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.CreateRequest()
+                        ConsentContract.ConsentCommands.CreateCommand()
                 )
                 `fails with`("The right amount of states are consumed")
             }
@@ -257,7 +257,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.CreateRequest()
+                        ConsentContract.ConsentCommands.CreateCommand()
                 )
                 `fails with`("Only ConsentRequestStates are created")
             }
@@ -278,7 +278,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.CreateRequest()
+                        ConsentContract.ConsentCommands.CreateCommand()
                 )
                 `fails with`("Attachments in state have the same amount as included in the transaction")
             }
@@ -302,7 +302,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.CreateRequest()
+                        ConsentContract.ConsentCommands.CreateCommand()
                 )
                 `fails with`("All attachments in state are include in the transaction")
             }
@@ -328,7 +328,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.ProcessRequest()
+                        ConsentContract.ConsentCommands.ProcessCommand()
                 )
                 verifies()
             }
@@ -353,7 +353,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.ProcessRequest()
+                        ConsentContract.ConsentCommands.ProcessCommand()
                 )
                 `fails with`("Only ConsentRequestStates are consumed")
             }
@@ -382,7 +382,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.ProcessRequest()
+                        ConsentContract.ConsentCommands.ProcessCommand()
                 )
                 `fails with`("The right amount of states are consumed")
             }
@@ -408,7 +408,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
+                        ConsentContract.ConsentCommands.FinalizeCommand()
                 )
                 verifies()
             }
@@ -434,7 +434,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
+                        ConsentContract.ConsentCommands.FinalizeCommand()
                 )
                 `fails with`("Attachments on output state are the same as input state")
             }
@@ -459,7 +459,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
+                        ConsentContract.ConsentCommands.FinalizeCommand()
                 )
                 `fails with`("Only ConsentStates are created")
             }
@@ -485,7 +485,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
+                        ConsentContract.ConsentCommands.FinalizeCommand()
                 )
                 `fails with`("All signatures are present")
             }
@@ -511,7 +511,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
+                        ConsentContract.ConsentCommands.FinalizeCommand()
                 )
                 `fails with`("All signatures belong to attachments")
             }
@@ -537,7 +537,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
+                        ConsentContract.ConsentCommands.FinalizeCommand()
                 )
                 `fails with`("All attachment signatures are unique")
             }
@@ -563,7 +563,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
+                        ConsentContract.ConsentCommands.FinalizeCommand()
                 )
                 `fails with`("All signatures are valid")
             }
@@ -589,7 +589,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.FinalizeRequest()
+                        ConsentContract.ConsentCommands.FinalizeCommand()
                 )
                 `fails with`("All signatures are present")
             }
@@ -615,7 +615,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.AcceptCommand()
                 )
                 verifies()
             }
@@ -641,7 +641,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.AcceptCommand()
                 )
                 `fails with`("unknown legalEntity found in attachmentSignatures, not present in attachments")
             }
@@ -667,7 +667,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.AcceptCommand()
                 )
                 `fails with`("Attachments in state have the same amount as include in the transaction")
             }
@@ -692,7 +692,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.AcceptCommand()
                 )
                 `fails with`("Only ConsentRequestStates are created")
             }
@@ -717,7 +717,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.AcceptCommand()
                 )
                 `fails with`("Output state has [attachments] more signatures than input state")
             }
@@ -744,7 +744,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.AcceptCommand()
                 )
                 `fails with`("All signatures belong to attachments")
             }
@@ -771,7 +771,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.AcceptCommand()
                 )
                 `fails with`("All attachment signatures are unique")
             }
@@ -798,7 +798,7 @@ class ConsentContractTest {
                 attachment(attHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.AcceptRequest()
+                        ConsentContract.ConsentCommands.AcceptCommand()
                 )
                 `fails with`("All signatures are valid")
             }

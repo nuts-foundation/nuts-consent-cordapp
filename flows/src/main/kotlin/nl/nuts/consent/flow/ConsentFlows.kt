@@ -94,7 +94,7 @@ object ConsentRequestFlows {
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
             val consentRequestState = ConsentRequestState(externalId, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
-            val txCommand = Command(ConsentContract.ConsentCommands.CreateRequest(), consentRequestState.participants.map { it.owningKey })
+            val txCommand = Command(ConsentContract.ConsentCommands.CreateCommand(), consentRequestState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addOutputState(consentRequestState, ConsentContract.CONTRACT_ID)
                     .addCommand(txCommand)
@@ -206,7 +206,7 @@ object ConsentRequestFlows {
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val txCommand = Command(ConsentContract.ConsentCommands.AcceptRequest(), newState.participants.map { it.owningKey })
+            val txCommand = Command(ConsentContract.ConsentCommands.AcceptCommand(), newState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(currentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
@@ -320,7 +320,7 @@ object ConsentRequestFlows {
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val txCommand = Command(ConsentContract.ConsentCommands.FinalizeRequest(), newState.participants.map { it.owningKey })
+            val txCommand = Command(ConsentContract.ConsentCommands.FinalizeCommand(), newState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(currentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
