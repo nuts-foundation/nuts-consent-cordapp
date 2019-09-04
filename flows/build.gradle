@@ -26,6 +26,7 @@ dependencies {
 
     // Corda dependencies.
     cordaCompile "net.corda:corda-core:$corda"
+    cordaCompile "net.corda:corda-node:$corda"
     cordaRuntime "net.corda:corda:$corda"
 
     // test dependencies

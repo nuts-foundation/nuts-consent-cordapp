@@ -22,10 +22,12 @@ package nl.nuts.consent.contract
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.*
+import net.corda.core.contracts.Requirements.using
 import net.corda.core.transactions.LedgerTransaction
 import nl.nuts.consent.model.ConsentMetadata
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
+import nl.nuts.test.GenesisState
 import java.lang.IllegalStateException
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
@@ -38,6 +40,24 @@ class ConsentContract : Contract {
     companion object {
         // Used to identify our contract when building a transaction.
         const val CONTRACT_ID = "nl.nuts.consent.contract.ConsentContract"
+
+        fun extractMetadata(attachment: Attachment) : ConsentMetadata {
+            val inStream = attachment.openAsJAR()
+            var entry: JarEntry = inStream.nextJarEntry
+
+            try {
+                while (!entry.name.endsWith("json")) {
+                    entry = inStream.nextJarEntry
+                }
+            }
+            catch(e :IllegalStateException) {
+                throw IllegalStateException("Attachment is missing required metadata file")
+            }
+
+            val reader = inStream.bufferedReader(Charset.forName("UTF8"))
+
+            return Serialisation.objectMapper().readValue(reader, ConsentMetadata::class.java)
+        }
     }
 
     object Serialisation {
@@ -66,36 +86,59 @@ class ConsentContract : Contract {
         fun verifyStates(tx: LedgerTransaction)
 
         /**
-         * Generic checks valid for all different commands
+         * Command used in CreateGenesisConsentState flow for creating the first record.
          */
-        open class GenericCommand : ConsentCommands {
+        class GenesisCommand : ConsentCommands {
             override fun verifyStates(tx: LedgerTransaction) {
-                verifyInputState(tx)
-                verifyOutputState(tx)
-                verifyAttachments(tx)
-            }
-
-            open fun verifyInputState(tx: LedgerTransaction) {
-
-            }
-
-            open fun verifyOutputState(tx: LedgerTransaction) {
                 val command = tx.commands.requireSingleCommand<ConsentCommands>()
-
-                requireThat {
-                    "The right amount of states are created" using (tx.outputs.size == 1)
-
-                    val out = tx.outputsOfType<LinearState>().single()
-
-                    "All participants are unique" using (out.participants.toSet().size == out.participants.size)
-                    "All participants must be signers" using (command.signers.containsAll(out.participants.map { it.owningKey }))
-                }
-            }
-
-            open fun verifyAttachments(tx: LedgerTransaction) {
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
+                    "The right amount of states are consumed" using (tx.inputs.isEmpty())
+                    "The right amount of states are created" using (tx.outputs.size == 1)
+
+                    val out = tx.outputsOfType<ConsentState>().single()
+
+                    "There is one participant" using (out.participants.size == 1)
+                    "All participants must be signers" using (command.signers.containsAll(out.participants.map { it.owningKey }))
+                    "The output state does not have any attachments" using (out.attachments.isEmpty())
+                    "The transaction does not have any additional attachments" using (attachments.isEmpty())
+                }
+            }
+        }
+
+        /**
+         * Command for adding new consent to an existing ConsentState, may be combined with an UpdateCommand
+         */
+        class AddCommand : ConsentCommands {
+            override fun verifyStates(tx: LedgerTransaction) {
+                val command = tx.commands.requireSingleCommand<AddCommand>()
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
+
+                requireThat {
+                    "The right amount of states are consumed" using (tx.inputs.size == 1)
+                    "The right amount of states are created" using (tx.outputs.size == 2)
+
+                    "Only ConsentStates are consumed" using tx.inputs.all { it.state.data is ConsentState }
+                    "1 ConsentState is produced" using (tx.outputsOfType<ConsentState>().size == 1)
+                    "1 ConsentBranch is produced" using (tx.outputsOfType<ConsentBranch>().size == 1)
+                }
+
+                val consentIn = tx.inputsOfType<ConsentState>().single()
+                val consentOut = tx.outputsOfType<ConsentState>().single()
+                val branchOut = tx.outputsOfType<ConsentBranch>().single()
+
+                requireThat {
+                    "Output state has the same UUID as input state" using (consentOut.linearId == consentIn.linearId)
+
+                    "ConsentBranch has the same externalId as ConsentState" using (consentOut.linearId.externalId == branchOut.uuid.externalId)
+
+                    "All new participants are unique" using (branchOut.participants.toSet().size == branchOut.participants.size)
+                    "All new participants must be signers" using (command.signers.containsAll(branchOut.participants.map { it.owningKey }))
+
+                    "ConsentState participants remains the same" using (consentOut.participants.containsAll(consentIn.participants))
+                    "ConsentState participants remains the same" using (consentIn.participants.containsAll(consentOut.participants))
+
                     "There must at least be 1 attachment" using (attachments.isNotEmpty())
                 }
 
@@ -103,154 +146,133 @@ class ConsentContract : Contract {
                 // raises IllegalState when invalid with correct message
                 metadataList.forEach { it.verify() }
 
-                val outputState = tx.outputStates.first()
-
                 val legalEntsPerAtt = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntity } }
 
-                if (outputState is ConsentRequestState) {
-                    // legalEntity in AttachmentSignature must match those in metadata
-                    val consentRequestState : ConsentRequestState = outputState
-                    if (!consentRequestState.signatures.map { it.legalEntityURI }.all { legalEntsPerAtt.flatten().contains(it) }) {
-                        throw IllegalArgumentException("unknown legalEntity found in attachmentSignatures, not present in attachments")
-                    }
-
-                    // legalEntities in metadata must match the list in the output state
-                    legalEntsPerAtt.forEach {
-                        requireThat {
-                            "legal entities in attachments do not match those in consentRequestState" using (consentRequestState.legalEntities.toTypedArray().contentDeepEquals(it.toTypedArray()))
-                        }
+                // legalEntities in metadata must match the list in the output state
+                legalEntsPerAtt.forEach {
+                    requireThat {
+                        "legal entities in attachments do not match those in ConsentBranch" using (branchOut.legalEntities.toTypedArray().contentDeepEquals(it.toTypedArray()))
                     }
                 }
-            }
 
-            protected fun extractMetadata(attachment: Attachment) : ConsentMetadata {
-                val inStream = attachment.openAsJAR()
-                var entry: JarEntry = inStream.nextJarEntry
+                requireThat {
+                    "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
+                    "All attachments in state are include in the transaction" using (arrayOf(branchOut.attachments.toList()) contentEquals arrayOf(attachments.map { it.id }))
 
-                try {
-                    while (!entry.name.endsWith("json")) {
-                        entry = inStream.nextJarEntry
-                    }
-                }
-                catch(e :IllegalStateException) {
-                    throw IllegalStateException("Attachment is missing required metadata file")
+                    "No signatures are present" using branchOut.signatures.isEmpty()
                 }
 
-                val reader = inStream.bufferedReader(Charset.forName("UTF8"))
-
-                return Serialisation.objectMapper().readValue(reader, ConsentMetadata::class.java)
+                // From CreateCommand
+                // NOP
             }
         }
 
         /**
-         * Abstract class with ConsentRequestState as input
+         * Command for adding a signature to a ConsentBranch
          */
-        open class ProcessCommand : GenericCommand() {
-            override fun verifyInputState(tx: LedgerTransaction) {
+        class SignCommand : ConsentCommands {
+            override fun verifyStates(tx: LedgerTransaction) {
+                val command = tx.commands.requireSingleCommand<SignCommand>()
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
+
                 requireThat {
                     "The right amount of states are consumed" using (tx.inputs.size == 1)
-                    "Only ConsentRequestStates are consumed" using (tx.inputs.all { it.state.data is ConsentRequestState })
-                }
-            }
+                    "The right amount of states are created" using (tx.outputs.size == 1)
 
-            override fun verifyOutputState(tx: LedgerTransaction) {
-                super.verifyOutputState(tx)
+                    "1 ConsentBranch is consumed" using (tx.inputsOfType<ConsentBranch>().size == 1)
+                    "1 ConsentBranch is produced" using (tx.outputsOfType<ConsentBranch>().size == 1)
+                }
+
+                val branchIn = tx.inputsOfType<ConsentBranch>().single()
+                val branchOut = tx.outputsOfType<ConsentBranch>().single()
 
                 requireThat {
-                    "Output state has the same UUID as input state" using ((tx.inputs.first().state.data as LinearState).linearId == (tx.outputs.first().data as LinearState).linearId)
+                    "Output state has the same UUID as input state" using (branchIn.linearId == branchOut.linearId)
+
+                    "All new participants are unique" using (branchOut.participants.toSet().size == branchOut.participants.size)
+                    "All new participants must be signers" using (command.signers.containsAll(branchOut.participants.map { it.owningKey }))
+
+                    "Participants remains the same" using (branchOut.participants.containsAll(branchIn.participants))
+                    "Participants remains the same" using (branchIn.participants.containsAll(branchOut.participants))
+
+                    "LegalEntities remain the same" using (branchOut.legalEntities.containsAll(branchIn.legalEntities))
+                    "LegalEntities remain the same" using (branchIn.legalEntities.containsAll(branchOut.legalEntities))
+
+                    "There must at least be 1 attachment" using (attachments.isNotEmpty())
+
+                    "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
+                    "All attachments in state are include in the transaction" using (arrayOf(branchOut.attachments.toList()) contentEquals arrayOf(attachments.map { it.id }))
+                    "Attachments have not changed" using (branchIn.attachments.containsAll(branchOut.attachments))
+                    "Attachments have not changed" using (branchOut.attachments.containsAll(branchIn.attachments))
+
+                    "1 more signature is present" using (branchOut.signatures.size == (branchIn.signatures.size + 1))
+                    "All attachment signatures are unique" using (branchOut.signatures.size == branchOut.signatures.toSet().size)
+                    "All signatures belong to attachments" using (branchOut.attachments.containsAll(branchOut.signatures.map { it.attachmentHash }))
+                    "All signatures are valid" using (branchOut.signatures.all { it.verify() })
                 }
-            }
 
-            fun verifyAttachmentsWithState(tx: LedgerTransaction, state: ConsentRequestState) {
-                val txAttachments = tx.attachments.filter { it !is ContractAttachment }
+                val metadataList = attachments.map {extractMetadata(it)}
+                // raises IllegalState when invalid with correct message
+                metadataList.forEach { it.verify() }
+                val legalEntsPerAtt = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntity } }
 
-                requireThat {
-                    "Attachments in state have the same amount as include in the transaction" using (state.attachments.size == txAttachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(state.attachments.toList()) contentEquals arrayOf(txAttachments.map { it.id }))
+                // legalEntity in AttachmentSignature must match those in metadata
+                if (!branchOut.signatures.map { it.legalEntityURI }.all { legalEntsPerAtt.flatten().contains(it) }) {
+                    throw IllegalArgumentException("unknown legalEntity found in attachmentSignatures, not present in attachments")
+                }
 
-                    "All attachment signatures are unique" using (state.signatures.size == state.signatures.toSet().size)
-//                    "All signatures belong to signing parties" using (state.participants.containsAll(state.signatures.map { it.party }))
-                    "All signatures belong to attachments" using (state.attachments.containsAll(state.signatures.map { it.attachmentHash }))
-                    "All signatures are valid" using (state.signatures.all { it.verify() })
+                // legalEntities in metadata must match the list in the output state
+                legalEntsPerAtt.forEach {
+                    requireThat {
+                        "legal entities in attachments do not match those in consentRequestState" using (branchOut.legalEntities.toTypedArray().contentDeepEquals(it.toTypedArray()))
+                    }
                 }
             }
         }
 
         /**
-         * Initiate a new request for a new consentState
-         */
-        class CreateCommand : GenericCommand() {
-            override fun verifyStates(tx: LedgerTransaction) {
-                super.verifyStates(tx)
-                val txAttachments = tx.attachments.filter { it !is ContractAttachment }
-
-                requireThat {
-                    "The right amount of states are consumed" using (tx.inputs.isEmpty())
-                    "Only ConsentRequestStates are created" using (tx.outputs.all { it.data is ConsentRequestState })
-
-                    val out = tx.outputsOfType<ConsentRequestState>().first()
-
-                    "Attachments in state have the same amount as included in the transaction" using (out.attachments.size == txAttachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(out.attachments.toList()) contentEquals arrayOf(txAttachments.map{it.id}))
-                }
-            }
-        }
-
-        /**
-         * Command for a Party to signal that it verified the encrypted contents
-         */
-        class AcceptCommand : ProcessCommand() {
-            override fun verifyOutputState(tx: LedgerTransaction) {
-                super.verifyOutputState(tx)
-
-                requireThat {
-                    "Only ConsentRequestStates are created" using (tx.outputs.all { it.data is ConsentRequestState })
-                }
-            }
-
-            override fun verifyAttachments(tx: LedgerTransaction) {
-                super.verifyAttachments(tx)
-
-                val inState = tx.inputsOfType<ConsentRequestState>().first()
-                val out = tx.outputsOfType<ConsentRequestState>().first()
-
-                verifyAttachmentsWithState(tx, out)
-
-                requireThat {
-                    "Output state has [attachments] more signatures than input state" using (out.signatures.size - inState.signatures.size == out.attachments.size)
-                    // using equality to verify everything is still there
-                    "Old attachment signatures must still all be present" using ((out.signatures - inState.signatures).size == out.attachments.size)
-                }
-            }
-        }
-
-        /**
-         * Command to finalize the request. All parties have done additional checks on the encrypted attachment data
+         * Command for merging a ConsentBranch and ConsentState into ConsentState
          *
+         * TODO: current logic only focusses on Addcommands not UpdateCommands!
          */
-        class FinalizeCommand : ProcessCommand() {
-            override fun verifyOutputState(tx: LedgerTransaction) {
-                super.verifyOutputState(tx)
+        class MergeCommand : ConsentCommands {
+            override fun verifyStates(tx: LedgerTransaction) {
+                val command = tx.commands.requireSingleCommand<MergeCommand>()
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
-                    "Only ConsentStates are created" using (tx.outputs.all { it.data is ConsentState })
+                    "The right amount of states are consumed" using (tx.inputs.size == 2)
+                    "The right amount of states are created" using (tx.outputs.size == 1)
+
+                    "1 ConsentBranch is consumed" using (tx.inputsOfType<ConsentBranch>().size == 1)
+                    "1 ConsentState is consumed" using (tx.inputsOfType<ConsentBranch>().size == 1)
+                    "1 ConsentState is produced" using (tx.outputsOfType<ConsentBranch>().size == 1)
                 }
-            }
 
-            override fun verifyAttachments(tx: LedgerTransaction) {
-                super.verifyAttachments(tx)
-
-                val inState = tx.inputsOfType<ConsentRequestState>().first()
-                val out = tx.outputsOfType<ConsentState>().first()
-
-                verifyAttachmentsWithState(tx, inState)
+                val branchIn = tx.inputsOfType<ConsentBranch>().single()
+                val consentIn = tx.inputsOfType<ConsentState>().single()
+                val consentOut = tx.outputsOfType<ConsentState>().single()
 
                 requireThat {
-                    // check if the right amount of attachments are present, given that no duplicate may exist, this is enough
-                    // todo: what to do when a single node handles transactions for multiple participants?
-                    "All signatures are present" using (inState.signatures.size == inState.participants.size * inState.attachments.size)
-                    "Attachments on output state are the same as input state" using ((inState.attachments - out.attachments).isEmpty())
-                    "Attachments on output state are the same as input state" using ((out.attachments - inState.attachments).isEmpty())
+                    "Output state has the same UUID as input state" using (consentIn.linearId == consentOut.linearId)
+
+                    "All participants are unique" using (consentOut.participants.toSet().size == consentOut.participants.size)
+                    "All participants must be signers" using (command.signers.containsAll(consentOut.participants.map { it.owningKey }))
+
+                    "Participants are a union of input states" using (consentOut.participants.containsAll(consentIn.participants))
+                    "Participants are a union of input states" using (consentOut.participants.containsAll(branchIn.participants))
+
+                    "There must at least be 1 attachment" using (attachments.isNotEmpty())
+
+                    "Attachments in state have the same amount as include in the transaction" using (consentOut.attachments.size == attachments.size)
+                    "All attachments in state are include in the transaction" using (branchIn.attachments.containsAll(attachments.map { it.id }))
+                    "Attachments include existing attachments" using (consentOut.attachments.containsAll(branchIn.attachments))
+                    "Attachments include new attachments" using (consentOut.attachments.containsAll(consentIn.attachments))
+
+                    "All signature are present" using (branchIn.signatures.size == (branchIn.attachments.size * branchIn.participants.size))
+                    "All attachment signatures are unique" using (branchIn.signatures.size == branchIn.signatures.toSet().size)
+                    "All signatures belong to attachments" using (branchIn.attachments.containsAll(branchIn.signatures.map { it.attachmentHash }))
+                    "All signatures are valid" using (branchIn.signatures.all { it.verify() })
                 }
             }
         }

@@ -20,10 +20,8 @@
 package nl.nuts.consent.flow
 
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
-import nl.nuts.consent.contract.AttachmentSignature
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentBranch
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -31,7 +29,7 @@ class NewConsentRequestFlowTest : GenericFlowTests() {
 
     @Test
     fun `recorded transaction has no inputs, a single output and a single attachment`() {
-        val signedTx = runCorrectTransaction()
+        val signedTx = runCorrectTransaction("id-N-1")
 
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {
@@ -45,27 +43,14 @@ class NewConsentRequestFlowTest : GenericFlowTests() {
             val attachments = recordedTx.tx.attachments
             assertEquals(2, attachments.size) // the first attachment is the contract and state jar
 
-            val recordedState = txOutputs[0].data as ConsentRequestState
-            assertEquals("uuid", recordedState.consentStateUUID.externalId)
+            val recordedState = txOutputs[0].data as ConsentBranch
+            assertEquals("id-N-1", recordedState.consentStateUUID.externalId)
         }
     }
 
-    // todo: enable after persisted state has been added
-    // @Test
-//    fun `external ID can only be used once`() {
-//        val hash = a.services.attachments.importAttachment(validAttachment.inputStream(), a.info.legalIdentities.first().name.toString(), null)
-//
-//        runCorrectTransaction(hash)
-//
-//        assertFailsWith(Exception::class) {
-//            runCorrectTransaction(hash)
-//        }
-//
-//
-//    }
 
-    override fun runCorrectTransaction() : SignedTransaction {
-        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+    override fun runCorrectTransaction(externalId: String) : SignedTransaction {
+        val flow = ConsentFlows.NewConsentRequest(externalId, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

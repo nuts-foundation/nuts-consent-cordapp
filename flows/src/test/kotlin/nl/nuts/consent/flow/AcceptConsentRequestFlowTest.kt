@@ -23,10 +23,9 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowException
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
 import nl.nuts.consent.contract.AttachmentSignature
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentBranch
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -38,13 +37,13 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
     @Before
     override fun setup() {
         super.setup()
-        val signedTx = runCorrectTransaction()
+        val signedTx = runCorrectTransaction("id-A-1")
         linearId = (signedTx.tx.outputs.first().data as LinearState).linearId
     }
 
     @Test
     fun `unknown external ID raises flow exception`() {
-        val flow = ConsentRequestFlows.AcceptConsentRequest(UniqueIdentifier("uuid"), emptyList())
+        val flow = ConsentFlows.AcceptConsentRequest(UniqueIdentifier("id-A-1"), emptyList())
         val future = a.startFlow(flow)
         network.runNetwork()
         assertFailsWith(FlowException::class) {
@@ -57,7 +56,7 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
         // we create a signature with the key of a Corda Party. But this must be a Nuts party (care provider)
         val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, b.services.keyManagementService.sign(validHash!!.bytes, b.info.legalIdentities.first().owningKey))
 
-        val flow = ConsentRequestFlows.AcceptConsentRequest(linearId!!, listOf(attSig))
+        val flow = ConsentFlows.AcceptConsentRequest(linearId!!, listOf(attSig))
         val future = a.startFlow(flow)
         network.runNetwork()
         val signedTx = future.get()
@@ -74,13 +73,13 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
             val attachments = recordedTx.tx.attachments
             assertEquals(2, attachments.size) // the first attachment is the contract and state jar
 
-            val recordedState = txOutputs[0].data as ConsentRequestState
-            assertEquals("uuid", recordedState.consentStateUUID.externalId)
+            val recordedState = txOutputs[0].data as ConsentBranch
+            assertEquals("id-A-1", recordedState.consentStateUUID.externalId)
         }
     }
 
-    override fun runCorrectTransaction() : SignedTransaction {
-        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+    override fun runCorrectTransaction(externalId: String) : SignedTransaction {
+        val flow = ConsentFlows.NewConsentRequest(externalId, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

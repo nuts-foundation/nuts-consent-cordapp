@@ -48,9 +48,9 @@ abstract class GenericFlowTests {
 
     init {
         listOf(a, b).forEach {
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptNewConsentRequest::class.java)
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptAcceptConsentRequest::class.java)
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptFinalizeConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptNewConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptAcceptConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptFinalizeConsentRequest::class.java)
         }
     }
 
@@ -63,11 +63,11 @@ abstract class GenericFlowTests {
     @After
     fun tearDown() = network.stopNodes()
 
-    abstract fun runCorrectTransaction() : SignedTransaction
+    abstract fun runCorrectTransaction(externalId: String) : SignedTransaction
 
     @Test
     fun `attachments exist at all parties`() {
-        runCorrectTransaction()
+        runCorrectTransaction("id-A-1")
 
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {
@@ -77,21 +77,21 @@ abstract class GenericFlowTests {
 
     @Test
     fun `signedTransaction from flow is signed by the acceptor`() {
-        val signedTx = runCorrectTransaction()
+        val signedTx = runCorrectTransaction("id-A-2")
 
         signedTx.verifySignaturesExcept(a.info.singleIdentity().owningKey)
     }
 
     @Test
     fun `signedTransaction from flow is signed by the initiator`() {
-        val signedTx = runCorrectTransaction()
+        val signedTx = runCorrectTransaction("id-A-3")
 
         signedTx.verifySignaturesExcept(b.info.singleIdentity().owningKey)
     }
 
     @Test
     fun `flow records a transaction in both parties' transaction storages`() {
-        val signedTx = runCorrectTransaction()
+        val signedTx = runCorrectTransaction("id-A-4")
 
         // We check the recorded transaction in both transaction storages.
         for (node in listOf(a, b)) {
