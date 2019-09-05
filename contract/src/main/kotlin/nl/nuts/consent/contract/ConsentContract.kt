@@ -140,11 +140,22 @@ class ConsentContract : Contract {
                     "ConsentState participants remains the same" using (consentIn.participants.containsAll(consentOut.participants))
 
                     "There must at least be 1 attachment" using (attachments.isNotEmpty())
+                    "ConsentBranch must add new attachments" using ((consentIn.attachments + branchOut.attachments).size > consentIn.attachments.size)
+
+                    "Attachments have not changed" using (consentIn.attachments.containsAll(consentOut.attachments))
+                    "Attachments have not changed" using (consentOut.attachments.containsAll(consentIn.attachments))
                 }
 
                 val metadataList = attachments.map {extractMetadata(it)}
                 // raises IllegalState when invalid with correct message
                 metadataList.forEach { it.verify() }
+
+                // attachments can not have previous reference
+                metadataList.forEach {
+                    requireThat {
+                        "attachments can not have a previous reference" using (it.previousAttachmentId == null)
+                    }
+                }
 
                 val legalEntsPerAtt = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntity } }
 
@@ -245,8 +256,8 @@ class ConsentContract : Contract {
                     "The right amount of states are created" using (tx.outputs.size == 1)
 
                     "1 ConsentBranch is consumed" using (tx.inputsOfType<ConsentBranch>().size == 1)
-                    "1 ConsentState is consumed" using (tx.inputsOfType<ConsentBranch>().size == 1)
-                    "1 ConsentState is produced" using (tx.outputsOfType<ConsentBranch>().size == 1)
+                    "1 ConsentState is consumed" using (tx.inputsOfType<ConsentState>().size == 1)
+                    "1 ConsentState is produced" using (tx.outputsOfType<ConsentState>().size == 1)
                 }
 
                 val branchIn = tx.inputsOfType<ConsentBranch>().single()
@@ -262,12 +273,10 @@ class ConsentContract : Contract {
                     "Participants are a union of input states" using (consentOut.participants.containsAll(consentIn.participants))
                     "Participants are a union of input states" using (consentOut.participants.containsAll(branchIn.participants))
 
-                    "There must at least be 1 attachment" using (attachments.isNotEmpty())
-
                     "Attachments in state have the same amount as include in the transaction" using (consentOut.attachments.size == attachments.size)
                     "All attachments in state are include in the transaction" using (branchIn.attachments.containsAll(attachments.map { it.id }))
-                    "Attachments include existing attachments" using (consentOut.attachments.containsAll(branchIn.attachments))
-                    "Attachments include new attachments" using (consentOut.attachments.containsAll(consentIn.attachments))
+                    "Attachments include existing attachments" using (consentOut.attachments.containsAll(consentIn.attachments))
+                    "Attachments include new attachments" using (consentOut.attachments.containsAll(branchIn.attachments))
 
                     "All signature are present" using (branchIn.signatures.size == (branchIn.attachments.size * branchIn.participants.size))
                     "All attachment signatures are unique" using (branchIn.signatures.size == branchIn.signatures.toSet().size)
