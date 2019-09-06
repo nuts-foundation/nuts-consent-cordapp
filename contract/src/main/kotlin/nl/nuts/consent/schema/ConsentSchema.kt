@@ -34,6 +34,9 @@ object ConsentSchemaV1 : MappedSchema(
         version = 1,
         mappedTypes = listOf(PersistentConsent::class.java)) {
 
+    /**
+     * This Entity is only defined so Corda picks it up and creates the table for us.
+     */
     @Entity
     @Table(name = "consent_states")
     class PersistentConsent(
