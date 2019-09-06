@@ -184,9 +184,6 @@ class ConsentContract : Contract {
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
-                    "The right amount of states are consumed" using (tx.inputs.size == 1)
-                    "The right amount of states are created" using (tx.outputs.size == 1)
-
                     "1 ConsentBranch is consumed" using (tx.inputsOfType<ConsentBranch>().size == 1)
                     "1 ConsentBranch is produced" using (tx.outputsOfType<ConsentBranch>().size == 1)
                 }
@@ -205,8 +202,6 @@ class ConsentContract : Contract {
 
                     "LegalEntities remain the same" using (branchOut.legalEntities.containsAll(branchIn.legalEntities))
                     "LegalEntities remain the same" using (branchIn.legalEntities.containsAll(branchOut.legalEntities))
-
-                    "There must at least be 1 attachment" using (attachments.isNotEmpty())
 
                     "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
                     "All attachments in state are include in the transaction" using (arrayOf(branchOut.attachments.toList()) contentEquals arrayOf(attachments.map { it.id }))
@@ -249,9 +244,6 @@ class ConsentContract : Contract {
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
-                    "The right amount of states are consumed" using (tx.inputs.size == 2)
-                    "The right amount of states are created" using (tx.outputs.size == 1)
-
                     "1 ConsentBranch is consumed" using (tx.inputsOfType<ConsentBranch>().size == 1)
                     "1 ConsentState is consumed" using (tx.inputsOfType<ConsentState>().size == 1)
                     "1 ConsentState is produced" using (tx.outputsOfType<ConsentState>().size == 1)
