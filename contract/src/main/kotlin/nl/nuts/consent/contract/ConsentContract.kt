@@ -22,13 +22,10 @@ package nl.nuts.consent.contract
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.*
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.transactions.LedgerTransaction
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
-import nl.nuts.test.GenesisState
-import java.lang.IllegalStateException
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.jar.JarEntry
