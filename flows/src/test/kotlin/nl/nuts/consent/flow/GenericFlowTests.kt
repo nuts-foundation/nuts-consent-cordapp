@@ -20,17 +20,12 @@
 package nl.nuts.consent.flow
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.TestCordapp
 import org.junit.After
 import org.junit.Before
-import org.junit.Test
 import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 const val VALID_META_ZIP_PATH = "src/test/resources/valid_metadata_for_add.zip"
 
@@ -45,7 +40,9 @@ abstract class GenericFlowTests {
 
     init {
         listOf(a, b).forEach {
-            it.registerInitiatedFlow(ConsentFlows.AcceptAddConsent::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptCreateConsentBranch::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptSignConsentBranch::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptMergeBranch::class.java)
         }
     }
 

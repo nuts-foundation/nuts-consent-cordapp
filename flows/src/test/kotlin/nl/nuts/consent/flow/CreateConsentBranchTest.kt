@@ -27,12 +27,12 @@ import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class AddConsentTest : GenericFlowTests() {
+class CreateConsentBranchTest : GenericFlowTests() {
     @Test
     fun `recorded transaction has 1 input, 2 outputs and a single attachment`() {
         val genesisTx = runGenesisTransaction("addConsentTest-1")
         val genesisState = genesisTx.tx.outputStates.first() as ConsentState
-        val signedTx = runCorrectTransaction(genesisState.consentStateUUID)
+        val signedTx = runCorrectTransaction(genesisState.uuid)
 
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {
@@ -56,7 +56,7 @@ class AddConsentTest : GenericFlowTests() {
     }
 
     private fun runCorrectTransaction(uuid: UniqueIdentifier) : SignedTransaction {
-        val flow = ConsentFlows.AddConsent(uuid, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(uuid, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

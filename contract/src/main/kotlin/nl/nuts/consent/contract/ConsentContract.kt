@@ -278,7 +278,7 @@ class ConsentContract : Contract {
                     "Attachments include existing attachments" using (consentOut.attachments.containsAll(consentIn.attachments))
                     "Attachments include new attachments" using (consentOut.attachments.containsAll(branchIn.attachments))
 
-                    "All signature are present" using (branchIn.signatures.size == (branchIn.attachments.size * branchIn.participants.size))
+                    "All signature are present" using (branchIn.signatures.size == (branchIn.attachments.size * branchIn.legalEntities.size))
                     "All attachment signatures are unique" using (branchIn.signatures.size == branchIn.signatures.toSet().size)
                     "All signatures belong to attachments" using (branchIn.attachments.containsAll(branchIn.signatures.map { it.attachmentHash }))
                     "All signatures are valid" using (branchIn.signatures.all { it.verify() })
