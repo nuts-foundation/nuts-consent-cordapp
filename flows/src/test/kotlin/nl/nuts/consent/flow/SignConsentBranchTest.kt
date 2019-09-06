@@ -20,6 +20,7 @@
 package nl.nuts.consent.flow
 
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.flows.FlowException
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
@@ -28,6 +29,7 @@ import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class SignConsentBranchTest  : GenericFlowTests() {
     @Test
@@ -49,6 +51,13 @@ class SignConsentBranchTest  : GenericFlowTests() {
 
             val attachments = recordedTx.tx.attachments
             assertEquals(2, attachments.size) // the first attachment is the contract and state jar
+        }
+    }
+
+    @Test
+    fun `transaction fails for unknown id`() {
+        assertFailsWith(FlowException::class) {
+            runSignTransaction(UniqueIdentifier())
         }
     }
 
