@@ -438,7 +438,7 @@ class ConsentContractTest {
                 )
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("a", "b"),
                                 listOf(createValidPAS(homeCare, attHash), createValidPAS(generalCare, attHash)), setOf(homeCare.party, generalCare.party))
                 )
                 output(
@@ -557,7 +557,7 @@ class ConsentContractTest {
                 )
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("a", "b"),
                                 listOf(createValidPAS(homeCare, attHash), createValidPAS(homeCare, SecureHash.zeroHash)), setOf(homeCare.party, generalCare.party))
                 )
                 output(
@@ -587,7 +587,7 @@ class ConsentContractTest {
                 )
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("a", "b"),
                                 listOf(createValidPAS(homeCare, attHash), createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
                 )
                 output(
@@ -617,7 +617,7 @@ class ConsentContractTest {
                 )
                 input(
                         ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), emptySet(),
+                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("a", "b"),
                                 listOf(createPASWrongSignature(homeCare, attHash), createValidPAS(generalCare, attHash)), setOf(homeCare.party, generalCare.party))
                 )
                 output(
