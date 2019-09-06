@@ -25,34 +25,34 @@ import nl.nuts.consent.state.ConsentBranch
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class NewConsentRequestFlowTest : GenericFlowTests() {
+class NewConsentRequestFlowTest { //}: GenericFlowTests() {
 
-    @Test
-    fun `recorded transaction has no inputs, a single output and a single attachment`() {
-        val signedTx = runCorrectTransaction("id-N-1")
-
-        // We check the recorded transaction in both vaults.
-        for (node in listOf(a, b)) {
-            val recordedTx = node.services.validatedTransactions.getTransaction(signedTx.id)
-            val txOutputs = recordedTx!!.tx.outputs
-            assertEquals(1, txOutputs.size)
-
-            val txInputs = recordedTx.tx.inputs
-            assertEquals(0, txInputs.size)
-
-            val attachments = recordedTx.tx.attachments
-            assertEquals(2, attachments.size) // the first attachment is the contract and state jar
-
-            val recordedState = txOutputs[0].data as ConsentBranch
-            assertEquals("id-N-1", recordedState.consentStateUUID.externalId)
-        }
-    }
-
-
-    override fun runCorrectTransaction(externalId: String) : SignedTransaction {
-        val flow = ConsentFlows.NewConsentRequest(externalId, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
-        val future = a.startFlow(flow)
-        network.runNetwork()
-        return future.getOrThrow()
-    }
+//    @Test
+//    fun `recorded transaction has no inputs, a single output and a single attachment`() {
+//        val signedTx = runCorrectTransaction("id-N-1")
+//
+//        // We check the recorded transaction in both vaults.
+//        for (node in listOf(a, b)) {
+//            val recordedTx = node.services.validatedTransactions.getTransaction(signedTx.id)
+//            val txOutputs = recordedTx!!.tx.outputs
+//            assertEquals(1, txOutputs.size)
+//
+//            val txInputs = recordedTx.tx.inputs
+//            assertEquals(0, txInputs.size)
+//
+//            val attachments = recordedTx.tx.attachments
+//            assertEquals(2, attachments.size) // the first attachment is the contract and state jar
+//
+//            val recordedState = txOutputs[0].data as ConsentBranch
+//            assertEquals("id-N-1", recordedState.consentStateUUID.externalId)
+//        }
+//    }
+//
+//
+//    override fun runCorrectTransaction(externalId: String) : SignedTransaction {
+//        val flow = ConsentFlows.NewConsentRequest(externalId, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+//        val future = a.startFlow(flow)
+//        network.runNetwork()
+//        return future.getOrThrow()
+//    }
 }

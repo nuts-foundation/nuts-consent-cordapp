@@ -43,11 +43,25 @@ import nl.nuts.consent.schema.ConsentSchemaV1
 @BelongsToContract(ConsentContract::class)
 data class ConsentState(
         val consentStateUUID: UniqueIdentifier,
-        val attachments: Set<SecureHash>,
+        val attachments: Set<SecureHash> = emptySet(),
         val parties: Set<Party> = emptySet()) : LinearState {
 
     override val linearId: UniqueIdentifier get() = consentStateUUID
     override val participants: List<Party> get() = parties.toList()
 
     override fun toString() = consentStateUUID.toString()
+
+//    override fun generateMappedObject(schema: MappedSchema): PersistentState {
+//        return when (schema) {
+//            is ConsentSchemaV1 -> ConsentSchemaV1.PersistentConsent(
+//                    uuid = linearId.id.toString(),
+//                    externalId = linearId.externalId!!
+//            )
+//            else -> throw IllegalArgumentException("Unrecognized schema $schema")
+//        }
+//    }
+//
+//    override fun supportedSchemas(): Iterable<MappedSchema> {
+//        return listOf(ConsentSchemaV1)
+//    }
 }

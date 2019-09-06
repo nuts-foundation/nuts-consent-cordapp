@@ -19,12 +19,13 @@
 
 package nl.nuts.consent.schema
 
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Table
+import org.hibernate.annotations.Type
+import java.util.*
+import javax.persistence.*
 
 object ConsentSchema
 
@@ -36,19 +37,19 @@ object ConsentSchemaV1 : MappedSchema(
     @Entity
     @Table(name = "consent_states")
     class PersistentConsent(
-            /**
-             * Acts as id and reference to consent state
-             */
-            @Id
-            @Column(name = "uuid", unique = true)
-            var uuid: String,
 
-            /**
-             * Acts as unique index on custodian/subject/actor triples
-             */
-            @Column(name = "external_id", unique = true)
-            var externalId: String
+            @Id
+            @Column(name = "external_id")
+            var externalId: String?,
+
+            @Column(name = "uuid", nullable = false)
+            var uuid: String
+
     ) {
-        constructor() : this("", "")
+        constructor(uid: UniqueIdentifier)
+                : this(externalId = uid.externalId,
+                uuid = uid.id.toString())
+
+        constructor() : this(UniqueIdentifier())
     }
 }
