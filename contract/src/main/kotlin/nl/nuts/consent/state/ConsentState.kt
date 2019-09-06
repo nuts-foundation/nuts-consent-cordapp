@@ -46,18 +46,4 @@ data class ConsentState(
     override val participants: List<Party> get() = parties.toList()
 
     override fun toString() = uuid.toString()
-
-//    override fun generateMappedObject(schema: MappedSchema): PersistentState {
-//        return when (schema) {
-//            is ConsentSchemaV1 -> ConsentSchemaV1.PersistentConsent(
-//                    uuid = linearId.id.toString(),
-//                    externalId = linearId.externalId!!
-//            )
-//            else -> throw IllegalArgumentException("Unrecognized schema $schema")
-//        }
-//    }
-//
-//    override fun supportedSchemas(): Iterable<MappedSchema> {
-//        return listOf(ConsentSchemaV1)
-//    }
 }

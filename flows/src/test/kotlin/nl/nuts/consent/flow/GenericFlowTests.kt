@@ -57,41 +57,4 @@ abstract class GenericFlowTests {
 
     @After
     fun tearDown() = network.stopNodes()
-
-//
-//    abstract fun runCorrectTransaction(externalId: String) : SignedTransaction
-//
-//    @Test
-//    fun `attachments exist at all parties`() {
-//        runCorrectTransaction("id-A-1")
-//
-//        // We check the recorded transaction in both vaults.
-//        for (node in listOf(a, b)) {
-//            assertTrue(node.services.attachments.hasAttachment(validHash!!))
-//        }
-//    }
-//
-//    @Test
-//    fun `signedTransaction from flow is signed by the acceptor`() {
-//        val signedTx = runCorrectTransaction("id-A-2")
-//
-//        signedTx.verifySignaturesExcept(a.info.singleIdentity().owningKey)
-//    }
-//
-//    @Test
-//    fun `signedTransaction from flow is signed by the initiator`() {
-//        val signedTx = runCorrectTransaction("id-A-3")
-//
-//        signedTx.verifySignaturesExcept(b.info.singleIdentity().owningKey)
-//    }
-//
-//    @Test
-//    fun `flow records a transaction in both parties' transaction storages`() {
-//        val signedTx = runCorrectTransaction("id-A-4")
-//
-//        // We check the recorded transaction in both transaction storages.
-//        for (node in listOf(a, b)) {
-//            assertEquals(signedTx, node.services.validatedTransactions.getTransaction(signedTx.id))
-//        }
-//    }
 }
