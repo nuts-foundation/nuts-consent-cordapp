@@ -80,7 +80,7 @@ object ConsentFlows {
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val consentState = ConsentState(UniqueIdentifier(externalId), emptySet(), setOf(serviceHub.myInfo.legalIdentities.first()))
+            val consentState = ConsentState(UniqueIdentifier(externalId), 1, emptySet(), setOf(serviceHub.myInfo.legalIdentities.first()))
             val txCommand = Command(ConsentContract.ConsentCommands.GenesisCommand(), consentState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addOutputState(consentState, ConsentContract.CONTRACT_ID)
@@ -93,20 +93,20 @@ object ConsentFlows {
             progressTracker.currentStep = SIGNING_TRANSACTION
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
 
-            store(consentState.uuid)
+            //store(consentState.uuid)
 
             progressTracker.currentStep = FINALISING_TRANSACTION
             return subFlow(FinalityFlow(partSignedTx, emptySet<FlowSession>(), FINALISING_TRANSACTION.childProgressTracker()))
         }
 
-        private fun store(UUID: UniqueIdentifier) {
-            // this is the HACK
-            (serviceHub as AbstractNode<*>.ServiceHubInternalImpl).database.currentOrNew()
-            val st = serviceHub.jdbcSession().prepareStatement("INSERT INTO consent_states VALUES(?, ?)")
-            st.setString(1, UUID.externalId)
-            st.setString(2, UUID.id.toString())
-            st.execute()
-        }
+//        private fun store(UUID: UniqueIdentifier) {
+//            // this is the HACK
+//            (serviceHub as AbstractNode<*>.ServiceHubInternalImpl).database.currentOrNew()
+//            val st = serviceHub.jdbcSession().prepareStatement("INSERT INTO consent_states VALUES(?, ?)")
+//            st.setString(1, UUID.externalId)
+//            st.setString(2, UUID.id.toString())
+//            st.execute()
+//        }
     }
 
 
@@ -171,7 +171,7 @@ object ConsentFlows {
             }
 
             val consentStateRef = pages.states.first()
-            val newConsentState = consentStateRef.state.data.copy()
+            val newConsentState = consentStateRef.state.data.copy(version = consentStateRef.state.data.version + 1)
 
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
@@ -385,8 +385,11 @@ object ConsentFlows {
             val consentRef = findConsentState(branchRef.state.data.branchPoint)
             val consentState = consentRef.state.data
 
-            val newState = ConsentState(uuid = consentRef.state.data.uuid,
-                    attachments = consentState.attachments + branchState.attachments, parties = branchState.parties)
+            val newState = ConsentState(
+                    uuid = consentRef.state.data.uuid,
+                    version = consentState.version + 1,
+                    attachments = consentState.attachments + branchState.attachments,
+                    parties = branchState.parties)
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION

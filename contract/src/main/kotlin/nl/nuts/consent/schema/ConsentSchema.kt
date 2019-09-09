@@ -38,21 +38,24 @@ object ConsentSchemaV1 : MappedSchema(
      * This Entity is only defined so Corda picks it up and creates the table for us.
      */
     @Entity
-    @Table(name = "consent_states")
+    @Table(name = "consent_states", uniqueConstraints = [UniqueConstraint(columnNames = arrayOf("external_id", "version"))])
     class PersistentConsent(
-
-            @Id
-            @Column(name = "external_id")
+            @Column(name = "external_id", nullable = false)
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
-            var uuid: String
+            var uuid: String,
 
-    ) {
-        constructor(uid: UniqueIdentifier)
-                : this(externalId = uid.externalId,
-                uuid = uid.id.toString())
+            @Column(name = "version", nullable = false)
+            var version: Int
 
-        constructor() : this(UniqueIdentifier())
+    ) : PersistentState() {
+        constructor(uuid: UniqueIdentifier, version: Int)
+                : this(
+                externalId = uuid.externalId,
+                uuid = uuid.id.toString(),
+                version = version)
+
+        constructor() : this(UniqueIdentifier(), 1)
     }
 }

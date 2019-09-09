@@ -96,6 +96,7 @@ class ConsentContract : Contract {
 
                     val out = tx.outputsOfType<ConsentState>().single()
 
+                    "Version number is 1" using (out.version == 1)
                     "There is one participant" using (out.participants.size == 1)
                     "All participants must be signers" using (command.signers.containsAll(out.participants.map { it.owningKey }))
                     "The output state does not have any attachments" using (out.attachments.isEmpty())
@@ -127,6 +128,7 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "Output state has the same UUID as input state" using (consentOut.linearId == consentIn.linearId)
+                    "Version number is 1 more" using (consentOut.version - consentIn.version == 1)
 
                     "ConsentBranch has the same externalId as ConsentState" using (consentOut.linearId.externalId == branchOut.uuid.externalId)
 
@@ -255,6 +257,7 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "Output state has the same UUID as input state" using (consentIn.linearId == consentOut.linearId)
+                    "Version number is 1 more" using (consentOut.version - consentIn.version == 1)
 
                     "All participants are unique" using (consentOut.participants.toSet().size == consentOut.participants.size)
                     "All participants must be signers" using (command.signers.containsAll(consentOut.participants.map { it.owningKey }))

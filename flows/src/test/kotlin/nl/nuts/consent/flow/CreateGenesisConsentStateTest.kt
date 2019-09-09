@@ -28,6 +28,7 @@ import net.corda.core.utilities.getOrThrow
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import java.sql.SQLException
+import javax.persistence.PersistenceException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -58,7 +59,7 @@ class CreateGenesisConsentStateTest : GenericFlowTests() {
     @Test
     fun `2nd transaction for externalId fails`() {
         runTransaction("unique")
-        assertFailsWith(SQLException::class) {
+        assertFailsWith(PersistenceException::class) {
             runTransaction("unique")
         }
     }
@@ -66,7 +67,7 @@ class CreateGenesisConsentStateTest : GenericFlowTests() {
     @Test
     fun `duplicate transaction for externalId results in 1 vault state`() {
         runTransaction("unique-3")
-        assertFailsWith(SQLException::class) {
+        assertFailsWith(PersistenceException::class) {
             runTransaction("unique-3")
         }
 

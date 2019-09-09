@@ -24,8 +24,12 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
 import nl.nuts.consent.contract.ConsentContract
+import nl.nuts.consent.schema.ConsentSchemaV1
 
 /**
  * State representing the actual consent records. All data is stored as attachments.
@@ -39,11 +43,16 @@ import nl.nuts.consent.contract.ConsentContract
 @BelongsToContract(ConsentContract::class)
 data class ConsentState(
         val uuid: UniqueIdentifier,
+        val version: Int,
         val attachments: Set<SecureHash> = emptySet(),
-        val parties: Set<Party> = emptySet()) : LinearState {
+        val parties: Set<Party> = emptySet()) : LinearState, QueryableState {
 
     override val linearId: UniqueIdentifier get() = uuid
     override val participants: List<Party> get() = parties.toList()
 
-    override fun toString() = uuid.toString()
+    override fun toString() = "${uuid.toString()}_${version}"
+
+    override fun generateMappedObject(schema: MappedSchema): PersistentState = ConsentSchemaV1.PersistentConsent(uuid, version)
+
+    override fun supportedSchemas(): Iterable<MappedSchema> =  listOf(ConsentSchemaV1)
 }

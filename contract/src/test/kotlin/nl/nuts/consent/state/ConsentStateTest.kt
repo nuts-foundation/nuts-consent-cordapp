@@ -27,8 +27,8 @@ class ConsentStateTest {
 
     @Test
     fun `string representation of ConsentState is its externalID concatenated with its UUID`() {
-        val state = ConsentState(UniqueIdentifier("uuid"), emptySet())
+        val state = ConsentState(UniqueIdentifier("uuid"), 1, emptySet())
 
-        assertEquals("${state.linearId.externalId}_${state.linearId.id}", state.toString())
+        assertEquals("${state.linearId.externalId}_${state.linearId.id}_${state.version}", state.toString())
     }
 }
