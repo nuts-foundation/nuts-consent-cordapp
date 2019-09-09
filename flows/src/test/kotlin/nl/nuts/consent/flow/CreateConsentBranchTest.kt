@@ -19,53 +19,54 @@
 
 package nl.nuts.consent.flow
 
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.flows.FlowException
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
-import nl.nuts.consent.contract.AttachmentSignature
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentState
 import org.junit.Test
+import java.sql.SQLException
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
-class NewConsentRequestFlowTest : GenericFlowTests() {
-
+class CreateConsentBranchTest : GenericFlowTests() {
     @Test
-    fun `recorded transaction has no inputs, a single output and a single attachment`() {
-        val signedTx = runCorrectTransaction()
+    fun `recorded transaction has 1 input, 2 outputs and a single attachment`() {
+        val genesisTx = runGenesisTransaction("addConsentTest-1")
+        val genesisState = genesisTx.tx.outputStates.first() as ConsentState
+        val signedTx = runCorrectTransaction(genesisState.uuid)
 
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {
             val recordedTx = node.services.validatedTransactions.getTransaction(signedTx.id)
             val txOutputs = recordedTx!!.tx.outputs
-            assertEquals(1, txOutputs.size)
+            assertEquals(2, txOutputs.size)
 
             val txInputs = recordedTx.tx.inputs
-            assertEquals(0, txInputs.size)
+            assertEquals(1, txInputs.size)
 
             val attachments = recordedTx.tx.attachments
             assertEquals(2, attachments.size) // the first attachment is the contract and state jar
-
-            val recordedState = txOutputs[0].data as ConsentRequestState
-            assertEquals("uuid", recordedState.consentStateUUID.externalId)
         }
     }
 
-    // todo: enable after persisted state has been added
-    // @Test
-//    fun `external ID can only be used once`() {
-//        val hash = a.services.attachments.importAttachment(validAttachment.inputStream(), a.info.legalIdentities.first().name.toString(), null)
-//
-//        runCorrectTransaction(hash)
-//
-//        assertFailsWith(Exception::class) {
-//            runCorrectTransaction(hash)
-//        }
-//
-//
-//    }
+    @Test
+    fun `transaction fails for unknown id`() {
+        assertFailsWith(FlowException::class) {
+            runCorrectTransaction(UniqueIdentifier())
+        }
+    }
 
-    override fun runCorrectTransaction() : SignedTransaction {
-        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+    private fun runGenesisTransaction(externalId: String) : SignedTransaction {
+        val flow = ConsentFlows.CreateGenesisConsentState(externalId)
+        val future = a.startFlow(flow)
+        network.runNetwork()
+        return future.getOrThrow()
+    }
+
+    private fun runCorrectTransaction(uuid: UniqueIdentifier) : SignedTransaction {
+        val flow = ConsentFlows.CreateConsentBranch(uuid, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

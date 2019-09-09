@@ -2,14 +2,14 @@ dist: xenial
 language: java
 jdk:
   - openjdk8
+install: echo "skip 'gradle assemble' step"
 script:
-  - ./gradlew check --info --stacktrace
+  - ./gradlew check
   - ./gradlew codeCoverageReport
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
   - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 cache:
-  bundler: true
   directories:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/

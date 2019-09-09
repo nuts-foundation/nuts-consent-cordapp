@@ -31,26 +31,22 @@ import nl.nuts.consent.contract.AttachmentSignature
  * The ConsentRequestState represents the current state of the request. This extra state is required
  * for doing an external check by a Party. The external check can be a long running transaction.
  *
- * @param consentStateExternalId the external id of the ConsentState record
+ * @param uuid the uuid of the ConsentState record
+ * @param branchPoint the consent record from which this state branched
  * @param attachments list of attachment hashes that need to be present at each transaction
  * @param signatures list of Party signatures representing parties that have completed checks against the encrypted attachment
  * @param legalEntities list of legal entities mentioned in the consent resource and must be involved in signing
  * @param parties involved parties
  */
 @BelongsToContract(ConsentContract::class)
-data class ConsentRequestState(val consentStateUUID: UniqueIdentifier,
-                               val attachments: Set<SecureHash>,
-                               val legalEntities: Set<String>,
-                               val signatures: List<AttachmentSignature>,
-                               val parties: Set<Party> = HashSet()) : LinearState {
+data class ConsentBranch(val uuid: UniqueIdentifier,
+                         val branchPoint: UniqueIdentifier,
+                         val attachments: Set<SecureHash>,
+                         val legalEntities: Set<String>,
+                         val signatures: List<AttachmentSignature>,
+                         val parties: Set<Party> = HashSet()) : LinearState {
 
-    constructor(externalId: String,
-                attachments: Set<SecureHash>,
-                legalEntities: Set<String>,
-                signatures: List<AttachmentSignature>,
-                parties: Set<Party>) : this(UniqueIdentifier(externalId), attachments, legalEntities, signatures, parties)
-
-    override val linearId: UniqueIdentifier get() = consentStateUUID
+    override val linearId: UniqueIdentifier get() = uuid
     override val participants: List<Party> get() = parties.toList()
 
     override fun toString() = linearId.toString()

@@ -38,6 +38,7 @@ It would no longer be possible to isolate a certain part of subject's health car
     Both organisations would be able to 'see' each other as parties where active consent is registered.
     Even if the home care organisation does not have consent to access the data from the mental health care organisation it would still know some care is being given.
     Given some extremely specialised care organisations, it would then be possible to determine what kind of care the subject is receiving.
+    FilteredTransaction also won't work since the participating nodes are still known, node names can give away the care organisation.
 
 FHIR mapping
 ------------

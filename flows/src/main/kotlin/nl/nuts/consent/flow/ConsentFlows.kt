@@ -21,6 +21,7 @@ package nl.nuts.consent.flow
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
@@ -33,32 +34,99 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
-import nl.nuts.consent.contract.ConsentContract
+import net.corda.node.internal.AbstractNode
 import nl.nuts.consent.contract.AttachmentSignature
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.contract.ConsentContract
+import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 
 /**
  * Collection of ConsentRequest flows: New, Accept, Finalize with their counter parties
  */
-object ConsentRequestFlows {
+object ConsentFlows {
 
     /**
-     * Flow for creating a new ConsentRequestState than can then be accepted by other parties
+     * Flow for creating the genesis record for a subj/actor pair at a custodian
+     */
+    @StartableByRPC
+    class CreateGenesisConsentState(val externalId:String)  : FlowLogic<SignedTransaction>() {
+
+        /**
+         * Define steps
+         */
+        companion object {
+            object GENERATING_TRANSACTION : Step("Generating transaction for new genesis block.")
+            object VERIFYING_TRANSACTION : Step("Verifying contract constraints.")
+            object SIGNING_TRANSACTION : Step("Signing transaction with our private key.")
+            object FINALISING_TRANSACTION : Step("Recording transaction in the vault.") {
+                override fun childProgressTracker() = FinalityFlow.tracker()
+            }
+
+            fun tracker() = ProgressTracker(
+                    GENERATING_TRANSACTION,
+                    VERIFYING_TRANSACTION,
+                    SIGNING_TRANSACTION,
+                    FINALISING_TRANSACTION
+            )
+        }
+
+        override val progressTracker = tracker()
+
+        @Suspendable
+        override fun call(): SignedTransaction {
+            // Obtain a reference to the notary we want to use.
+            val notary = serviceHub.networkMapCache.notaryIdentities[0]
+
+            // Stage 1.
+            progressTracker.currentStep = GENERATING_TRANSACTION
+            // Generate an unsigned transaction.
+            val consentState = ConsentState(UniqueIdentifier(externalId), emptySet(), setOf(serviceHub.myInfo.legalIdentities.first()))
+            val txCommand = Command(ConsentContract.ConsentCommands.GenesisCommand(), consentState.participants.map { it.owningKey })
+            val txBuilder = TransactionBuilder(notary)
+                    .addOutputState(consentState, ConsentContract.CONTRACT_ID)
+                    .addCommand(txCommand)
+
+            progressTracker.currentStep = VERIFYING_TRANSACTION
+            // Verify that the transaction is valid.
+            txBuilder.verify(serviceHub)
+
+            progressTracker.currentStep = SIGNING_TRANSACTION
+            val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
+
+            store(consentState.uuid)
+
+            progressTracker.currentStep = FINALISING_TRANSACTION
+            return subFlow(FinalityFlow(partSignedTx, emptySet<FlowSession>(), FINALISING_TRANSACTION.childProgressTracker()))
+        }
+
+        private fun store(UUID: UniqueIdentifier) {
+            // this is the HACK
+            (serviceHub as AbstractNode<*>.ServiceHubInternalImpl).database.currentOrNew()
+            val st = serviceHub.jdbcSession().prepareStatement("INSERT INTO consent_states VALUES(?, ?)")
+            st.setString(1, UUID.externalId)
+            st.setString(2, UUID.id.toString())
+            st.execute()
+        }
+    }
+
+
+    /**
+     * Flow for creating a new ConsentBranch than can then be accepted by other parties
      *
-     * @param externalId the HMAC (using custodian SK) of the patient record
+     * @param consentStateUuid the existing state uuid
      * @param attachments hashes of attachments containing the consent records
      * @param legalEntities list of involved parties, also present in metadata. This is just to help other parts of the node to quickly filter if action is needed
      * @param parties Other nodes involved in transaction (excluding this one)
      */
     @InitiatingFlow
     @StartableByRPC
-    class NewConsentRequest(val externalId:String, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
+    class CreateConsentBranch(val consentStateUuid:UniqueIdentifier, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
          */
         companion object {
+            object FINDING_PREVIOUS_STATE : Step("Finding previous state to consume (Genesis or existing consent).")
             object GENERATING_TRANSACTION : Step("Generating transaction based on new consent request.")
             object VERIFYING_TRANSACTION : Step("Verifying contract constraints.")
             object SIGNING_TRANSACTION : Step("Signing transaction with our private key.")
@@ -71,6 +139,7 @@ object ConsentRequestFlows {
             }
 
             fun tracker() = ProgressTracker(
+                    FINDING_PREVIOUS_STATE,
                     GENERATING_TRANSACTION,
                     VERIFYING_TRANSACTION,
                     SIGNING_TRANSACTION,
@@ -90,13 +159,28 @@ object ConsentRequestFlows {
             val parties = peers.map{ serviceHub.networkMapCache.getPeerByLegalName(it)!! }.toMutableSet()
             parties.remove(serviceHub.myInfo.legalIdentities.first())
 
-            // Stage 1.
+            progressTracker.currentStep = FINDING_PREVIOUS_STATE
+            val criteria = QueryCriteria.LinearStateQueryCriteria(
+                    linearId = listOf(consentStateUuid),
+                    status = Vault.StateStatus.UNCONSUMED,
+                    contractStateTypes = setOf(ConsentState::class.java))
+            val pages: Vault.Page<ConsentState> = serviceHub.vaultService.queryBy(criteria = criteria)
+
+            if (pages.states.size != 1) {
+                throw FlowException("Given UniqueIdentifier not found or does not have the correct amount of states (found = ${pages.states.size})")
+            }
+
+            val consentStateRef = pages.states.first()
+            val newConsentState = consentStateRef.state.data.copy()
+
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val consentRequestState = ConsentRequestState(externalId, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
-            val txCommand = Command(ConsentContract.ConsentCommands.CreateCommand(), consentRequestState.participants.map { it.owningKey })
+            val newState = ConsentBranch(UniqueIdentifier(externalId = consentStateUuid.externalId), consentStateUuid, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
+            val txCommand = Command(ConsentContract.ConsentCommands.AddCommand(), newState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
-                    .addOutputState(consentRequestState, ConsentContract.CONTRACT_ID)
+                    .addInputState(consentStateRef)
+                    .addOutputState(newState, ConsentContract.CONTRACT_ID)
+                    .addOutputState(newConsentState, ConsentContract.CONTRACT_ID)
                     .addCommand(txCommand)
 
             // add all attachments to transaction
@@ -119,18 +203,19 @@ object ConsentRequestFlows {
     }
 
     /**
-     * Counter party flow for NewConsentRequest
-     * All checks are done within the contract. This flow just checks if the right state is created.
+     * Counter party flow for AddConsent
+     * All checks are done within the contract. This flow just checks if the right command is used.
      */
-    @InitiatedBy(NewConsentRequest::class)
-    class AcceptNewConsentRequest(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+    @InitiatedBy(CreateConsentBranch::class)
+    class AcceptCreateConsentBranch(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(askingPartySession) {
-                override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    val output = stx.tx.outputs.single().data
-                    "This must be a ConsentRequest transaction." using (output is ConsentRequestState)
-                    // contract is also executed on this transaction
+                override fun checkTransaction(stx: SignedTransaction) {
+                    val command = stx.tx.commands.single().value
+                    requireThat {
+                        "command is an AddCommand" using (command is ConsentContract.ConsentCommands.AddCommand)
+                    }
                 }
             }
             val txId = subFlow(signTransactionFlow).id
@@ -140,21 +225,12 @@ object ConsentRequestFlows {
 
     }
 
-    /**
-     * Flow for accepting a ConsentRequestState
-     *
-     * @param externalId the HMAC (using custodian SK) of the patient record, must be same as the new consent request state
-     * @param approvedSigs new signatures of involved parties
-     */
     @InitiatingFlow
     @StartableByRPC
-    class AcceptConsentRequest(val consentStateUUID:UniqueIdentifier, val approvedSigs: List<AttachmentSignature>) : FlowLogic<SignedTransaction>() {
+    class SignConsentBranch(val consentBranchUUID:UniqueIdentifier, val approvedSigs: List<AttachmentSignature>) : FlowLogic<SignedTransaction>() {
 
-        /**
-         * Define steps
-         */
         companion object {
-            object FIND_CURRENT_STATE : Step("Finding existing ConsentRequestState record.")
+            object FIND_CURRENT_STATE : Step("Finding existing ConsentBranch record.")
             object GENERATING_TRANSACTION : Step("Generating transaction based on existing consent request.")
             object VERIFYING_TRANSACTION : Step("Verifying contract constraints.")
             object SIGNING_TRANSACTION : Step("Signing transaction with our private key.")
@@ -189,11 +265,11 @@ object ConsentRequestFlows {
             // Stage 0.
             progressTracker.currentStep = FIND_CURRENT_STATE
             val criteria = QueryCriteria.LinearStateQueryCriteria(participants = listOf(me),
-                    linearId = listOf(consentStateUUID),
+                    linearId = listOf(consentBranchUUID),
                     status = Vault.StateStatus.UNCONSUMED,
-                    contractStateTypes = setOf(nl.nuts.consent.state.ConsentRequestState::class.java))
+                    contractStateTypes = setOf(ConsentBranch::class.java))
 
-            val pages: Vault.Page<ConsentRequestState> = serviceHub.vaultService.queryBy(criteria = criteria)
+            val pages: Vault.Page<ConsentBranch> = serviceHub.vaultService.queryBy(criteria = criteria)
 
             if (pages.states.size != 1) {
                 throw FlowException("Given external ID does not have any unconsumed states")
@@ -206,7 +282,7 @@ object ConsentRequestFlows {
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val txCommand = Command(ConsentContract.ConsentCommands.AcceptCommand(), newState.participants.map { it.owningKey })
+            val txCommand = Command(ConsentContract.ConsentCommands.SignCommand(), newState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(currentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
@@ -231,20 +307,20 @@ object ConsentRequestFlows {
         }
     }
 
+
+
     /**
-     * Counter party flow for AcceptConsentRequest
+     * Counter party flow for SignConsentBranch
      * All checks are done within the contract. This flow just checks if the right state is created.
-     * todo: naming
      */
-    @InitiatedBy(AcceptConsentRequest::class)
-    class AcceptAcceptConsentRequest(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+    @InitiatedBy(SignConsentBranch::class)
+    class AcceptSignConsentBranch(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(askingPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
-                    "This must be a ConsentRequest transaction." using (output is ConsentRequestState)
-                    // contract is also executed on this transaction
+                    "This must be a ConsentRequest transaction." using (output is ConsentBranch)
                 }
             }
             val txId = subFlow(signTransactionFlow).id
@@ -255,19 +331,20 @@ object ConsentRequestFlows {
     }
 
     /**
-     * Flow for finalizing a ConsentRequestState, creating a ConsentState
+     * Flow for mering a ConsentBranch, creating a newer ConsentState
      *
      * @param consentStateUUID the unique identifier used in the ConsentRequestState
      */
     @InitiatingFlow
     @StartableByRPC
-    class FinalizeConsentRequest(val consentStateUUID:UniqueIdentifier) : FlowLogic<SignedTransaction>() {
+    class MergeBranch(val branchUUID:UniqueIdentifier) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
          */
         companion object {
-            object FIND_CURRENT_STATE : Step("Finding existing ConsentRequestState record.")
+            object FIND_CURRENT_BRANCH : Step("Finding existing ConsentBranch record.")
+            object FIND_CURRENT_STATE : Step("Finding existing ConsentState record.")
             object GENERATING_TRANSACTION : Step("Generating transaction based on existing consent request.")
             object VERIFYING_TRANSACTION : Step("Verifying contract constraints.")
             object SIGNING_TRANSACTION : Step("Signing transaction with our private key.")
@@ -280,6 +357,7 @@ object ConsentRequestFlows {
             }
 
             fun tracker() = ProgressTracker(
+                    FIND_CURRENT_BRANCH,
                     FIND_CURRENT_STATE,
                     GENERATING_TRANSACTION,
                     VERIFYING_TRANSACTION,
@@ -299,35 +377,30 @@ object ConsentRequestFlows {
             // identity of this node
             val me = serviceHub.myInfo.legalIdentities.first()
 
-            // Stage 0.
+            progressTracker.currentStep = FIND_CURRENT_BRANCH
+            val branchRef = findBranchState(branchUUID)
+            val branchState = branchRef.state.data
+
             progressTracker.currentStep = FIND_CURRENT_STATE
-            val criteria = QueryCriteria.LinearStateQueryCriteria(participants = listOf(me),
-                    linearId = listOf(consentStateUUID),
-                    status = Vault.StateStatus.UNCONSUMED,
-                    contractStateTypes = setOf(nl.nuts.consent.state.ConsentRequestState::class.java))
+            val consentRef = findConsentState(branchRef.state.data.branchPoint)
+            val consentState = consentRef.state.data
 
-            val pages: Vault.Page<ConsentRequestState> = serviceHub.vaultService.queryBy(criteria = criteria)
-
-            if (pages.states.size != 1) {
-                throw FlowException("Given external ID does not have the correct amount of unconsumed states")
-            }
-
-            val currentStateRef = pages.states.first()
-            val currentState = currentStateRef.state.data
-            val newState = ConsentState(consentStateUUID = currentState.consentStateUUID,
-                    attachments = currentState.attachments, parties = currentState.parties)
+            val newState = ConsentState(uuid = consentRef.state.data.uuid,
+                    attachments = consentState.attachments + branchState.attachments, parties = branchState.parties)
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val txCommand = Command(ConsentContract.ConsentCommands.FinalizeCommand(), newState.participants.map { it.owningKey })
+            val txCommand = Command(ConsentContract.ConsentCommands.MergeCommand(), newState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
-                    .addInputState(currentStateRef)
+                    .addInputState(consentRef)
+                    .addInputState(branchRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
                     .addCommand(txCommand)
 
             // add all previous attachments to transaction
-            currentState.attachments.forEach { txBuilder.addAttachment(it) }
+            branchState.attachments.forEach { txBuilder.addAttachment(it) }
+            consentState.attachments.forEach { txBuilder.addAttachment(it) }
 
             progressTracker.currentStep = VERIFYING_TRANSACTION
             // Verify that the transaction is valid.
@@ -337,11 +410,38 @@ object ConsentRequestFlows {
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
 
             progressTracker.currentStep = GATHERING_SIGS
-            var otherPartySessions = (currentState.participants - me).map { initiateFlow(it) }
+            var otherPartySessions = (newState.participants - me).map { initiateFlow(it) }
+
             val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, otherPartySessions, GATHERING_SIGS.childProgressTracker()))
 
             progressTracker.currentStep = FINALISING_TRANSACTION
             return subFlow(FinalityFlow(fullySignedTx, otherPartySessions, FINALISING_TRANSACTION.childProgressTracker()))
+        }
+
+        private fun findBranchState(branchUUID: UniqueIdentifier) : StateAndRef<ConsentBranch> {
+            val criteria = QueryCriteria.LinearStateQueryCriteria(
+                    linearId = listOf(branchUUID),
+                    status = Vault.StateStatus.UNCONSUMED,
+                    contractStateTypes = setOf(ConsentBranch::class.java))
+            val pages: Vault.Page<ConsentBranch> = serviceHub.vaultService.queryBy(criteria = criteria)
+            if (pages.states.size != 1) {
+                throw FlowException("Given external ID does not have the correct amount of unconsumed branch states")
+            }
+
+            return pages.states.first()
+        }
+
+        private fun findConsentState(branchUUID: UniqueIdentifier) : StateAndRef<ConsentState> {
+            val criteria = QueryCriteria.LinearStateQueryCriteria(
+                    linearId = listOf(branchUUID),
+                    status = Vault.StateStatus.UNCONSUMED,
+                    contractStateTypes = setOf(ConsentState::class.java))
+            val pages: Vault.Page<ConsentState> = serviceHub.vaultService.queryBy(criteria = criteria)
+            if (pages.states.size != 1) {
+                throw FlowException("Given external ID does not have the correct amount of unconsumed consent states")
+            }
+
+            return pages.states.first()
         }
     }
 
@@ -349,15 +449,14 @@ object ConsentRequestFlows {
      * Counter party flow for FinalizeConsentRequest
      * All checks are done within the contract. This flow just checks if the right state is created.
      */
-    @InitiatedBy(FinalizeConsentRequest::class)
-    class AcceptFinalizeConsentRequest(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
+    @InitiatedBy(MergeBranch::class)
+    class AcceptMergeBranch(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(askingPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
                     "This must be a Consent transaction." using (output is ConsentState)
-                    // contract is also executed on this transaction
                 }
             }
             val txId = subFlow(signTransactionFlow).id

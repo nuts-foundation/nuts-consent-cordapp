@@ -19,48 +19,26 @@
 
 package nl.nuts.consent.flow
 
-import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowException
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
 import nl.nuts.consent.contract.AttachmentSignature
-import nl.nuts.consent.state.ConsentRequestState
-import org.junit.Before
+import nl.nuts.consent.state.ConsentBranch
+import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class AcceptConsentRequestFlowTest : GenericFlowTests() {
-    private var linearId : UniqueIdentifier? = null
-
-    @Before
-    override fun setup() {
-        super.setup()
-        val signedTx = runCorrectTransaction()
-        linearId = (signedTx.tx.outputs.first().data as LinearState).linearId
-    }
-
+class SignConsentBranchTest  : GenericFlowTests() {
     @Test
-    fun `unknown external ID raises flow exception`() {
-        val flow = ConsentRequestFlows.AcceptConsentRequest(UniqueIdentifier("uuid"), emptyList())
-        val future = a.startFlow(flow)
-        network.runNetwork()
-        assertFailsWith(FlowException::class) {
-            future.getOrThrow()
-        }
-    }
-
-    @Test
-    fun `recorded transaction has a single input, a single output and a single attachment`() {
-        // we create a signature with the key of a Corda Party. But this must be a Nuts party (care provider)
-        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, b.services.keyManagementService.sign(validHash!!.bytes, b.info.legalIdentities.first().owningKey))
-
-        val flow = ConsentRequestFlows.AcceptConsentRequest(linearId!!, listOf(attSig))
-        val future = a.startFlow(flow)
-        network.runNetwork()
-        val signedTx = future.get()
+    fun `recorded transaction has 1 input, 1 outputs and a single attachment`() {
+        val genesisTx = runGenesisTransaction("mergeConsentTest-1")
+        val genesisState = genesisTx.tx.outputStates.first() as ConsentState
+        val branchTx = runAddTransaction(genesisState.uuid)
+        val branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
+        val signedTx = runSignTransaction(branchState.uuid)
 
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {
@@ -73,14 +51,33 @@ class AcceptConsentRequestFlowTest : GenericFlowTests() {
 
             val attachments = recordedTx.tx.attachments
             assertEquals(2, attachments.size) // the first attachment is the contract and state jar
-
-            val recordedState = txOutputs[0].data as ConsentRequestState
-            assertEquals("uuid", recordedState.consentStateUUID.externalId)
         }
     }
 
-    override fun runCorrectTransaction() : SignedTransaction {
-        val flow = ConsentRequestFlows.NewConsentRequest("uuid", setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+    @Test
+    fun `transaction fails for unknown id`() {
+        assertFailsWith(FlowException::class) {
+            runSignTransaction(UniqueIdentifier())
+        }
+    }
+
+    private fun runGenesisTransaction(externalId: String): SignedTransaction {
+        val flow = ConsentFlows.CreateGenesisConsentState(externalId)
+        val future = a.startFlow(flow)
+        network.runNetwork()
+        return future.getOrThrow()
+    }
+
+    private fun runAddTransaction(uuid: UniqueIdentifier): SignedTransaction {
+        val flow = ConsentFlows.CreateConsentBranch(uuid, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val future = a.startFlow(flow)
+        network.runNetwork()
+        return future.getOrThrow()
+    }
+
+    private fun runSignTransaction(uuid: UniqueIdentifier): SignedTransaction {
+        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, b.services.keyManagementService.sign(validHash!!.bytes, b.info.legalIdentities.first().owningKey))
+        val flow = ConsentFlows.SignConsentBranch(uuid, listOf(attSig))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

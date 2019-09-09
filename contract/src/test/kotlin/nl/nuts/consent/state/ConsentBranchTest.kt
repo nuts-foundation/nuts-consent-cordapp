@@ -19,13 +19,14 @@
 
 package nl.nuts.consent.state
 
+import net.corda.core.contracts.UniqueIdentifier
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class ConsentRequestStateTest {
+class ConsentBranchTest {
     @Test
-    fun `string representation of ConsentRequestState is its externalID appended with REQ`() {
-        val state = ConsentRequestState("uuid", emptySet(), emptySet(), emptyList(), emptySet())
+    fun `string representation of ConsentRequestState is its uuid`() {
+        val state = ConsentBranch(UniqueIdentifier(externalId = "id"), UniqueIdentifier(), emptySet(), emptySet(), emptyList(), emptySet())
 
         assertEquals("${state.linearId.externalId}_${state.linearId.id}", state.toString())
     }

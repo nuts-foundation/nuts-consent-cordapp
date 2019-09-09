@@ -20,19 +20,14 @@
 package nl.nuts.consent.flow
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.TestCordapp
 import org.junit.After
 import org.junit.Before
-import org.junit.Test
 import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
-const val VALID_META_ZIP_PATH = "src/test/resources/valid_metadata.zip"
+const val VALID_META_ZIP_PATH = "src/test/resources/valid_metadata_for_add.zip"
 
 abstract class GenericFlowTests {
     protected val network = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(
@@ -40,19 +35,19 @@ abstract class GenericFlowTests {
             TestCordapp.findCordapp("nl.nuts.consent.contract")
     )))
 
-    protected val validAttachment = File(VALID_META_ZIP_PATH)
-    protected var validHash: SecureHash? = null
-
     protected val a = network.createPartyNode()
     protected val b = network.createPartyNode()
 
     init {
         listOf(a, b).forEach {
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptNewConsentRequest::class.java)
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptAcceptConsentRequest::class.java)
-            it.registerInitiatedFlow(ConsentRequestFlows.AcceptFinalizeConsentRequest::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptCreateConsentBranch::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptSignConsentBranch::class.java)
+            it.registerInitiatedFlow(ConsentFlows.AcceptMergeBranch::class.java)
         }
     }
+
+    protected val validAttachment = File(VALID_META_ZIP_PATH)
+    protected var validHash: SecureHash? = null
 
     @Before
     open fun setup() {
@@ -62,40 +57,4 @@ abstract class GenericFlowTests {
 
     @After
     fun tearDown() = network.stopNodes()
-
-    abstract fun runCorrectTransaction() : SignedTransaction
-
-    @Test
-    fun `attachments exist at all parties`() {
-        runCorrectTransaction()
-
-        // We check the recorded transaction in both vaults.
-        for (node in listOf(a, b)) {
-            assertTrue(node.services.attachments.hasAttachment(validHash!!))
-        }
-    }
-
-    @Test
-    fun `signedTransaction from flow is signed by the acceptor`() {
-        val signedTx = runCorrectTransaction()
-
-        signedTx.verifySignaturesExcept(a.info.singleIdentity().owningKey)
-    }
-
-    @Test
-    fun `signedTransaction from flow is signed by the initiator`() {
-        val signedTx = runCorrectTransaction()
-
-        signedTx.verifySignaturesExcept(b.info.singleIdentity().owningKey)
-    }
-
-    @Test
-    fun `flow records a transaction in both parties' transaction storages`() {
-        val signedTx = runCorrectTransaction()
-
-        // We check the recorded transaction in both transaction storages.
-        for (node in listOf(a, b)) {
-            assertEquals(signedTx, node.services.validatedTransactions.getTransaction(signedTx.id))
-        }
-    }
 }

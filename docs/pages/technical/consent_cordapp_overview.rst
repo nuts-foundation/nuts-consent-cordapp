@@ -12,7 +12,7 @@ States
 A Corda state represents a current state of a particular record. Everything in Corda is immutable so states can only linked together by referencing the previous state.
 States are stored in the vault together with any attachments. Corda has different types of states, within Nuts we use the `LinearState <https://docs.corda.net/api-states.html?highlight=linearstate#linearstate>`_.
 A *LinearState* has an *externalId* that never changes, this will be the link Nuts needs to connect encrypted records to real patient records.
-The *externalId* will be created by the Party that creates the *LinearState*. The *externalId* will be get a unique constraint in the underlying database.
+The *externalId* will be created by the Party that creates the *LinearState*. The *externalId* will get a unique constraint in the underlying database.
 Because of the encrypted records, this id is the only way to prevent mass-duplicate records. In order to achieve this, the id must be unique but also reproducible.
 It therefore must use some sort of consistent hashing algorithm like *HMAC_256* using the private key of the organisation.
 This will only prevent duplicate records initiated by a single node. This will not prevent duplicates from multiple sources when initiated at the same time.
