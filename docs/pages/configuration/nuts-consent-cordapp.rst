@@ -3,6 +3,8 @@
 Nuts consent cordapp configuration
 ##################################
 
+.. marker-for-readme
+
 The basic node.conf inside the Cordap base directory should look similar like this:
 
 .. code-block:: yaml
