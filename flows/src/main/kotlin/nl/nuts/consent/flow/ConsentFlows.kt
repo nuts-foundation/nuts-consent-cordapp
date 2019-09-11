@@ -98,15 +98,6 @@ object ConsentFlows {
             progressTracker.currentStep = FINALISING_TRANSACTION
             return subFlow(FinalityFlow(partSignedTx, emptySet<FlowSession>(), FINALISING_TRANSACTION.childProgressTracker()))
         }
-
-//        private fun store(UUID: UniqueIdentifier) {
-//            // this is the HACK
-//            (serviceHub as AbstractNode<*>.ServiceHubInternalImpl).database.currentOrNew()
-//            val st = serviceHub.jdbcSession().prepareStatement("INSERT INTO consent_states VALUES(?, ?)")
-//            st.setString(1, UUID.externalId)
-//            st.setString(2, UUID.id.toString())
-//            st.execute()
-//        }
     }
 
 
@@ -176,12 +167,18 @@ object ConsentFlows {
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
             val newState = ConsentBranch(UniqueIdentifier(externalId = consentStateUuid.externalId), consentStateUuid, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
-            val txCommand = Command(ConsentContract.ConsentCommands.AddCommand(), newState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(consentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
                     .addOutputState(newConsentState, ConsentContract.CONTRACT_ID)
-                    .addCommand(txCommand)
+
+            // Select correct commands
+            if (hasNew()) {
+                txBuilder.addCommand(Command(ConsentContract.ConsentCommands.AddCommand(), newState.participants.map { it.owningKey }))
+            }
+            if (hasUpdate()) {
+                txBuilder.addCommand(Command(ConsentContract.ConsentCommands.UpdateCommand(), newState.participants.map { it.owningKey }))
+            }
 
             // add all attachments to transaction
             attachments.forEach { txBuilder.addAttachment(it) }
@@ -199,6 +196,30 @@ object ConsentFlows {
 
             progressTracker.currentStep = FINALISING_TRANSACTION
             return subFlow(FinalityFlow(fullySignedTx, otherPartySessions, FINALISING_TRANSACTION.childProgressTracker()))
+        }
+
+        fun hasNew() : Boolean {
+            this.attachments.forEach {
+                val att = serviceHub.attachments.openAttachment(it) ?: throw FlowException("Unknown attachment $it")
+
+                val metadata = ConsentContract.extractMetadata(att)
+                if (metadata.previousAttachmentId == null) {
+                    return true
+                }
+            }
+            return false
+        }
+
+        fun hasUpdate() : Boolean {
+            this.attachments.forEach {
+                val att = serviceHub.attachments.openAttachment(it) ?: throw FlowException("Unknown attachment $it")
+
+                val metadata = ConsentContract.extractMetadata(att)
+                if (metadata.previousAttachmentId != null) {
+                    return true
+                }
+            }
+            return false
         }
     }
 
