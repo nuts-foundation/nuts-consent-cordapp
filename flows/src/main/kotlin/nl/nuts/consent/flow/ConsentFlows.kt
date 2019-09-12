@@ -27,6 +27,7 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
@@ -44,6 +45,10 @@ import nl.nuts.consent.state.ConsentState
  * Collection of ConsentRequest flows: New, Accept, Finalize with their counter parties
  */
 object ConsentFlows {
+
+    fun referencedAttachments(state : ConsentBranch, serviceHub: ServiceHub) : Set<SecureHash> {
+        return state.referencedAttachments(state.attachments.map { it to serviceHub.attachments.openAttachment(it)!! }.toMap())
+    }
 
     /**
      * Flow for creating the genesis record for a subj/actor pair at a custodian
@@ -176,8 +181,11 @@ object ConsentFlows {
             if (hasNew()) {
                 txBuilder.addCommand(Command(ConsentContract.ConsentCommands.AddCommand(), newState.participants.map { it.owningKey }))
             }
-            if (hasUpdate()) {
+
+            val referencedAttachments = referencedAttachments(newState, serviceHub)
+            if (referencedAttachments.isNotEmpty()) {
                 txBuilder.addCommand(Command(ConsentContract.ConsentCommands.UpdateCommand(), newState.participants.map { it.owningKey }))
+                //referencedAttachments.forEach{txBuilder.addAttachment(it)}
             }
 
             // add all attachments to transaction
@@ -198,7 +206,7 @@ object ConsentFlows {
             return subFlow(FinalityFlow(fullySignedTx, otherPartySessions, FINALISING_TRANSACTION.childProgressTracker()))
         }
 
-        fun hasNew() : Boolean {
+        private fun hasNew() : Boolean {
             this.attachments.forEach {
                 val att = serviceHub.attachments.openAttachment(it) ?: throw FlowException("Unknown attachment $it")
 
@@ -209,23 +217,11 @@ object ConsentFlows {
             }
             return false
         }
-
-        fun hasUpdate() : Boolean {
-            this.attachments.forEach {
-                val att = serviceHub.attachments.openAttachment(it) ?: throw FlowException("Unknown attachment $it")
-
-                val metadata = ConsentContract.extractMetadata(att)
-                if (metadata.previousAttachmentId != null) {
-                    return true
-                }
-            }
-            return false
-        }
     }
 
     /**
-     * Counter party flow for AddConsent
-     * All checks are done within the contract. This flow just checks if the right command is used.
+     * Counter party flow for CreateConsentBranch
+     * All checks are done within the contract.
      */
     @InitiatedBy(CreateConsentBranch::class)
     class AcceptCreateConsentBranch(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
@@ -233,10 +229,7 @@ object ConsentFlows {
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(askingPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) {
-                    val command = stx.tx.commands.single().value
-                    requireThat {
-                        "command is an AddCommand" using (command is ConsentContract.ConsentCommands.AddCommand)
-                    }
+
                 }
             }
             val txId = subFlow(signTransactionFlow).id
@@ -328,20 +321,17 @@ object ConsentFlows {
         }
     }
 
-
-
     /**
      * Counter party flow for SignConsentBranch
-     * All checks are done within the contract. This flow just checks if the right state is created.
+     * All checks are done within the contract.
      */
     @InitiatedBy(SignConsentBranch::class)
     class AcceptSignConsentBranch(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(askingPartySession) {
-                override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    val output = stx.tx.outputs.single().data
-                    "This must be a ConsentRequest transaction." using (output is ConsentBranch)
+                override fun checkTransaction(stx: SignedTransaction) {
+
                 }
             }
             val txId = subFlow(signTransactionFlow).id
@@ -366,6 +356,7 @@ object ConsentFlows {
         companion object {
             object FIND_CURRENT_BRANCH : Step("Finding existing ConsentBranch record.")
             object FIND_CURRENT_STATE : Step("Finding existing ConsentState record.")
+            object FIND_REFERENCED_ATTACHMENTS : Step("Finding updated attachments.")
             object GENERATING_TRANSACTION : Step("Generating transaction based on existing consent request.")
             object VERIFYING_TRANSACTION : Step("Verifying contract constraints.")
             object SIGNING_TRANSACTION : Step("Signing transaction with our private key.")
@@ -380,6 +371,7 @@ object ConsentFlows {
             fun tracker() = ProgressTracker(
                     FIND_CURRENT_BRANCH,
                     FIND_CURRENT_STATE,
+                    FIND_REFERENCED_ATTACHMENTS,
                     GENERATING_TRANSACTION,
                     VERIFYING_TRANSACTION,
                     SIGNING_TRANSACTION,
@@ -406,10 +398,14 @@ object ConsentFlows {
             val consentRef = findConsentState(branchRef.state.data.branchPoint)
             val consentState = consentRef.state.data
 
+            progressTracker.currentStep = FIND_REFERENCED_ATTACHMENTS
+            val referenceAttachments = referencedAttachments(branchState, serviceHub)
+            val consentStateAttachmentsToKeep = consentState.attachments.filter { !referenceAttachments.contains(it) }.toSet()
+
             val newState = ConsentState(
                     uuid = consentRef.state.data.uuid,
                     version = consentState.version + 1,
-                    attachments = consentState.attachments + branchState.attachments,
+                    attachments = consentStateAttachmentsToKeep + branchState.attachments,
                     parties = branchState.parties)
 
             // Stage 1.
@@ -422,9 +418,10 @@ object ConsentFlows {
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
                     .addCommand(txCommand)
 
-            // add all previous attachments to transaction
+            // add all new attachments to transaction
             branchState.attachments.forEach { txBuilder.addAttachment(it) }
-            consentState.attachments.forEach { txBuilder.addAttachment(it) }
+            // and the leftovers
+            consentStateAttachmentsToKeep.forEach { txBuilder.addAttachment(it) }
 
             progressTracker.currentStep = VERIFYING_TRANSACTION
             // Verify that the transaction is valid.
@@ -470,17 +467,16 @@ object ConsentFlows {
     }
 
     /**
-     * Counter party flow for FinalizeConsentRequest
-     * All checks are done within the contract. This flow just checks if the right state is created.
+     * Counter party flow for MergeBranch
+     * All checks are done within the contract.
      */
     @InitiatedBy(MergeBranch::class)
     class AcceptMergeBranch(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(askingPartySession) {
-                override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    val output = stx.tx.outputs.single().data
-                    "This must be a Consent transaction." using (output is ConsentState)
+                override fun checkTransaction(stx: SignedTransaction) {
+
                 }
             }
             val txId = subFlow(signTransactionFlow).id

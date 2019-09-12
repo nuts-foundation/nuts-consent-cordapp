@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowException
 import net.corda.core.transactions.LedgerTransaction
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentBranch
@@ -189,7 +190,7 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(branchOut.attachments.toSortedSet()) contentEquals arrayOf(attachments.map { it.id }.toSortedSet()))
+                    "All attachments in state are include in the transaction" using (attachments.map { it.id }.containsAll(branchOut.attachments))
 
                     "No signatures are present" using branchOut.signatures.isEmpty()
                 }
@@ -208,11 +209,8 @@ class ConsentContract : Contract {
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
                 val metadataList = attachments.map {extractMetadata(it)}
 
-                // attachments can not have previous reference
-                metadataList.forEach {
-                    requireThat {
-                        "attachments can not have a previous reference" using (it.previousAttachmentId == null)
-                    }
+                requireThat {
+                    "a new attachment must be added" using (metadataList.find { it.previousAttachmentId == null } != null)
                 }
             }
         }
@@ -221,12 +219,14 @@ class ConsentContract : Contract {
          * Command for updating existing consent, may be combined with an AddCommand
          */
         class UpdateCommand : BranchCommand() {
-            override fun requiredNumberOfAttachments(tx: LedgerTransaction) = 2
+            // only new one is relevant, old one is obsolete
+            override fun requiredNumberOfAttachments(tx: LedgerTransaction) = 1
             override fun requireSingleCommand() = false
 
             override fun verifyStates(tx: LedgerTransaction) {
                 super.verifyStates(tx)
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
+                val consentIn = tx.inputsOfType<ConsentState>().single()
                 val branchOut = tx.outputsOfType<ConsentBranch>().single()
                 val metadataList = attachments.map {extractMetadata(it)}
 
@@ -237,7 +237,8 @@ class ConsentContract : Contract {
                     metadataList.forEach {
                         if (it.previousAttachmentId != null) {
                             updateFound = true
-                            "attachment referenced by new attachment must be attached" using (branchOut.attachments.contains(SecureHash.parse(it.previousAttachmentId)))
+                            "attachment referenced by new attachment must not be attached" using (!branchOut.attachments.contains(SecureHash.parse(it.previousAttachmentId)))
+                            "attachment referenced by new attachment must be present in input state" using (consentIn.attachments.contains(SecureHash.parse(it.previousAttachmentId)))
                         }
                     }
                     "at least 1 update exists in attachment list" using (updateFound)
@@ -281,7 +282,7 @@ class ConsentContract : Contract {
                     "LegalEntities remain the same" using (branchIn.legalEntities.containsAll(branchOut.legalEntities))
 
                     "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(branchOut.attachments.toList()) contentEquals arrayOf(attachments.map { it.id }))
+                    "All attachments in state are include in the transaction" using (branchOut.attachments.subtract(attachments.map { it.id }.toSet()).isEmpty())
                     "Attachments have not changed" using (branchIn.attachments.containsAll(branchOut.attachments))
                     "Attachments have not changed" using (branchOut.attachments.containsAll(branchIn.attachments))
 
@@ -317,7 +318,12 @@ class ConsentContract : Contract {
             override fun requiredNumberOfAttachments(tx: LedgerTransaction) : Int {
                 val branchIn = tx.inputsOfType<ConsentBranch>().single()
                 val consentIn = tx.inputsOfType<ConsentState>().single()
-                return (branchIn.attachments + consentIn.attachments).size
+
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
+                val referencedAttachments = branchIn.referencedAttachments(attachments.map { it.id to it}.toMap())
+                val unreferencedAttachments = consentIn.attachments.filter { !referencedAttachments.contains(it) }
+
+                return (branchIn.attachments + unreferencedAttachments).size
             }
 
             override fun requireSingleCommand() = true
@@ -336,6 +342,9 @@ class ConsentContract : Contract {
                 val consentIn = tx.inputsOfType<ConsentState>().single()
                 val consentOut = tx.outputsOfType<ConsentState>().single()
 
+                val referencedAttachments = branchIn.referencedAttachments(attachments.map { it.id to it}.toMap())
+                val unreferencedAttachments = consentIn.attachments.filter { !referencedAttachments.contains(it) }
+
                 requireThat {
                     "Output state has the same UUID as input state" using (consentIn.linearId == consentOut.linearId)
                     "Version number is 1 more" using (consentOut.version - consentIn.version == 1)
@@ -347,9 +356,10 @@ class ConsentContract : Contract {
                     "Participants are a union of input states" using (consentOut.participants.containsAll(branchIn.participants))
 
                     "Attachments in state have the same amount as include in the transaction" using (consentOut.attachments.size == attachments.size)
-                    "All attachments in state are include in the transaction" using (branchIn.attachments.containsAll(attachments.map { it.id }))
-                    "Attachments include existing attachments" using (consentOut.attachments.containsAll(consentIn.attachments))
+                    "All attachments in state are include in the transaction" using (attachments.map { it.id }.containsAll(consentOut.attachments))
+                    "Attachments include unreferenced attachments" using (consentOut.attachments.containsAll(unreferencedAttachments))
                     "Attachments include new attachments" using (consentOut.attachments.containsAll(branchIn.attachments))
+                    "All referenced attachments are available in input state" using (consentIn.attachments.containsAll(referencedAttachments))
 
                     "All signature are present" using (branchIn.signatures.size == (branchIn.attachments.size * branchIn.legalEntities.size))
                     "All attachment signatures are unique" using (branchIn.signatures.size == branchIn.signatures.toSet().size)

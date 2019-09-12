@@ -42,9 +42,8 @@ class UpdateCommandTest : ConsentContractTest() {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(oldAttHash, updAttHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
+                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(updAttHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
-                attachment(oldAttHash)
                 attachment(updAttHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
@@ -56,7 +55,7 @@ class UpdateCommandTest : ConsentContractTest() {
     }
 
     @Test
-    fun `UpdateCommand fails on missing referenced attachment`() {
+    fun `UpdateCommand fails on missing referenced attachment in input state`() {
         ledgerServices.ledger {
             val oldAttHash = attachment(newAttachment2.inputStream())
             val updAttHash = attachment(updAttachment.inputStream())
@@ -72,15 +71,14 @@ class UpdateCommandTest : ConsentContractTest() {
                 )
                 output(
                         ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(oldAttHash, updAttHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
+                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(updAttHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
                 )
-                attachment(oldAttHash)
                 attachment(updAttHash)
                 command(
                         listOf(homeCare.publicKey, generalCare.publicKey),
                         ConsentContract.ConsentCommands.UpdateCommand()
                 )
-                `fails with`("attachment referenced by new attachment must be attached")
+                `fails with`("attachment referenced by new attachment must be present in input state")
             }
         }
     }

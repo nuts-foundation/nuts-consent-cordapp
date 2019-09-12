@@ -61,14 +61,14 @@ class MergeBranchTest : GenericFlowTests() {
     }
 
     private fun runAddTransaction(uuid: UniqueIdentifier): SignedTransaction {
-        val flow = ConsentFlows.CreateConsentBranch(uuid, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()
     }
 
     private fun runSignTransaction(uuid: UniqueIdentifier): SignedTransaction {
-        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHash!!, b.services.keyManagementService.sign(validHash!!.bytes, b.info.legalIdentities.first().owningKey))
+        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHashAdd1!!, b.services.keyManagementService.sign(validHashAdd1!!.bytes, b.info.legalIdentities.first().owningKey))
         val flow = ConsentFlows.SignConsentBranch(uuid, listOf(attSig))
         val future = b.startFlow(flow)
         network.runNetwork()
