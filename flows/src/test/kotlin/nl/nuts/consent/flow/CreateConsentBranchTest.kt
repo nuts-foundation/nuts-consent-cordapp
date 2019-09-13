@@ -26,7 +26,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
-import java.sql.SQLException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -66,7 +65,7 @@ class CreateConsentBranchTest : GenericFlowTests() {
     }
 
     private fun runCorrectTransaction(uuid: UniqueIdentifier) : SignedTransaction {
-        val flow = ConsentFlows.CreateConsentBranch(uuid, setOf(validHash!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

@@ -22,6 +22,8 @@ package nl.nuts.consent.contract
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowException
 import net.corda.core.transactions.LedgerTransaction
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentBranch
@@ -71,23 +73,51 @@ class ConsentContract : Contract {
     }
 
     override fun verify(tx: LedgerTransaction) {
-        val command = tx.commands.requireSingleCommand<ConsentCommands>()
+        val commands = tx.commandsOfType<ConsentCommands>()
+        var totalAttachments = 0
+        // check uniqueness of commands
+        commands.forEach {
+            requireThat {
+                "Commands with requireSingleCommand=true must run in a standalone transaction" using (!it.value.requireSingleCommand() || (it.value.requireSingleCommand() && commands.size == 1))
+            }
+            it.value.verifyStates(tx)
 
-        // verification delegated to specific commands
-        command.value.verifyStates(tx)
+            totalAttachments += it.value.requiredNumberOfAttachments(tx)
+        }
+
+        // check for correct total amount of attachments
+        requireThat {
+            "The correct number of attachments are included when multiple commands are used" using (tx.attachments.filter { it !is ContractAttachment }.size == totalAttachments)
+        }
     }
 
     // Used to indicate the transaction's intent.
     interface ConsentCommands : CommandData {
 
+        /**
+         * How many attachments are needed per command
+         */
+        fun requiredNumberOfAttachments(tx: LedgerTransaction) : Int
+
+        /**
+         * Can a command be executed together with another command
+         */
+        fun requireSingleCommand() : Boolean
+
+        /**
+         * Each command has its own set of rules
+         */
         fun verifyStates(tx: LedgerTransaction)
 
         /**
          * Command used in CreateGenesisConsentState flow for creating the first record.
          */
         class GenesisCommand : ConsentCommands {
+            override fun requiredNumberOfAttachments(tx: LedgerTransaction)  = 0
+            override fun requireSingleCommand() = true
+
             override fun verifyStates(tx: LedgerTransaction) {
-                val command = tx.commands.requireSingleCommand<ConsentCommands>()
+                val command = tx.commands.single { it.value == this }
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
@@ -106,11 +136,11 @@ class ConsentContract : Contract {
         }
 
         /**
-         * Command for adding new consent to an existing ConsentState, may be combined with an UpdateCommand
+         * constraints that holds for both Add and Update commands
          */
-        class AddCommand : ConsentCommands {
+        abstract class BranchCommand : ConsentCommands {
             override fun verifyStates(tx: LedgerTransaction) {
-                val command = tx.commands.requireSingleCommand<AddCommand>()
+                val command = tx.commands.single { it.value == this }
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
@@ -149,13 +179,6 @@ class ConsentContract : Contract {
                 // raises IllegalState when invalid with correct message
                 metadataList.forEach { it.verify() }
 
-                // attachments can not have previous reference
-                metadataList.forEach {
-                    requireThat {
-                        "attachments can not have a previous reference" using (it.previousAttachmentId == null)
-                    }
-                }
-
                 val legalEntsPerAtt = metadataList.map { itOuter -> itOuter.organisationSecureKeys.map { it.legalEntity } }
 
                 // legalEntities in metadata must match the list in the output state
@@ -167,13 +190,59 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(branchOut.attachments.toList()) contentEquals arrayOf(attachments.map { it.id }))
+                    "All attachments in state are include in the transaction" using (attachments.map { it.id }.containsAll(branchOut.attachments))
 
                     "No signatures are present" using branchOut.signatures.isEmpty()
                 }
+            }
+        }
 
-                // From CreateCommand
-                // NOP
+        /**
+         * Command for adding new consent to an existing ConsentState, may be combined with an UpdateCommand
+         */
+        class AddCommand : BranchCommand() {
+            override fun requiredNumberOfAttachments(tx: LedgerTransaction) = 1
+            override fun requireSingleCommand() = false
+
+            override fun verifyStates(tx: LedgerTransaction) {
+                super.verifyStates(tx)
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
+                val metadataList = attachments.map {extractMetadata(it)}
+
+                requireThat {
+                    "a new attachment must be added" using (metadataList.find { it.previousAttachmentId == null } != null)
+                }
+            }
+        }
+
+        /**
+         * Command for updating existing consent, may be combined with an AddCommand
+         */
+        class UpdateCommand : BranchCommand() {
+            // only new one is relevant, old one is obsolete
+            override fun requiredNumberOfAttachments(tx: LedgerTransaction) = 1
+            override fun requireSingleCommand() = false
+
+            override fun verifyStates(tx: LedgerTransaction) {
+                super.verifyStates(tx)
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
+                val consentIn = tx.inputsOfType<ConsentState>().single()
+                val branchOut = tx.outputsOfType<ConsentBranch>().single()
+                val metadataList = attachments.map {extractMetadata(it)}
+
+                var updateFound = false
+
+                // attachments may have previous reference, if so the old attachment must exist
+                requireThat {
+                    metadataList.forEach {
+                        if (it.previousAttachmentId != null) {
+                            updateFound = true
+                            "attachment referenced by new attachment must not be attached" using (!branchOut.attachments.contains(SecureHash.parse(it.previousAttachmentId)))
+                            "attachment referenced by new attachment must be present in input state" using (consentIn.attachments.contains(SecureHash.parse(it.previousAttachmentId)))
+                        }
+                    }
+                    "at least 1 update exists in attachment list" using (updateFound)
+                }
             }
         }
 
@@ -181,8 +250,15 @@ class ConsentContract : Contract {
          * Command for adding a signature to a ConsentBranch
          */
         class SignCommand : ConsentCommands {
+            override fun requiredNumberOfAttachments(tx: LedgerTransaction) : Int {
+                val branchIn = tx.inputsOfType<ConsentBranch>().single()
+                return branchIn.attachments.size
+            }
+
+            override fun requireSingleCommand() = true
+
             override fun verifyStates(tx: LedgerTransaction) {
-                val command = tx.commands.requireSingleCommand<SignCommand>()
+                val command = tx.commands.single { it.value == this }
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
@@ -206,7 +282,7 @@ class ConsentContract : Contract {
                     "LegalEntities remain the same" using (branchIn.legalEntities.containsAll(branchOut.legalEntities))
 
                     "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
-                    "All attachments in state are include in the transaction" using (arrayOf(branchOut.attachments.toList()) contentEquals arrayOf(attachments.map { it.id }))
+                    "All attachments in state are include in the transaction" using (branchOut.attachments.subtract(attachments.map { it.id }.toSet()).isEmpty())
                     "Attachments have not changed" using (branchIn.attachments.containsAll(branchOut.attachments))
                     "Attachments have not changed" using (branchOut.attachments.containsAll(branchIn.attachments))
 
@@ -237,12 +313,23 @@ class ConsentContract : Contract {
 
         /**
          * Command for merging a ConsentBranch and ConsentState into ConsentState
-         *
-         * TODO: current logic only focusses on Addcommands not UpdateCommands!
          */
         class MergeCommand : ConsentCommands {
+            override fun requiredNumberOfAttachments(tx: LedgerTransaction) : Int {
+                val branchIn = tx.inputsOfType<ConsentBranch>().single()
+                val consentIn = tx.inputsOfType<ConsentState>().single()
+
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
+                val referencedAttachments = branchIn.referencedAttachments(attachments.map { it.id to it}.toMap())
+                val unreferencedAttachments = consentIn.attachments.filter { !referencedAttachments.contains(it) }
+
+                return (branchIn.attachments + unreferencedAttachments).size
+            }
+
+            override fun requireSingleCommand() = true
+
             override fun verifyStates(tx: LedgerTransaction) {
-                val command = tx.commands.requireSingleCommand<MergeCommand>()
+                val command = tx.commands.single { it.value == this }
                 val attachments = tx.attachments.filter { it !is ContractAttachment }
 
                 requireThat {
@@ -255,6 +342,9 @@ class ConsentContract : Contract {
                 val consentIn = tx.inputsOfType<ConsentState>().single()
                 val consentOut = tx.outputsOfType<ConsentState>().single()
 
+                val referencedAttachments = branchIn.referencedAttachments(attachments.map { it.id to it}.toMap())
+                val unreferencedAttachments = consentIn.attachments.filter { !referencedAttachments.contains(it) }
+
                 requireThat {
                     "Output state has the same UUID as input state" using (consentIn.linearId == consentOut.linearId)
                     "Version number is 1 more" using (consentOut.version - consentIn.version == 1)
@@ -266,9 +356,10 @@ class ConsentContract : Contract {
                     "Participants are a union of input states" using (consentOut.participants.containsAll(branchIn.participants))
 
                     "Attachments in state have the same amount as include in the transaction" using (consentOut.attachments.size == attachments.size)
-                    "All attachments in state are include in the transaction" using (branchIn.attachments.containsAll(attachments.map { it.id }))
-                    "Attachments include existing attachments" using (consentOut.attachments.containsAll(consentIn.attachments))
+                    "All attachments in state are include in the transaction" using (attachments.map { it.id }.containsAll(consentOut.attachments))
+                    "Attachments include unreferenced attachments" using (consentOut.attachments.containsAll(unreferencedAttachments))
                     "Attachments include new attachments" using (consentOut.attachments.containsAll(branchIn.attachments))
+                    "All referenced attachments are available in input state" using (consentIn.attachments.containsAll(referencedAttachments))
 
                     "All signature are present" using (branchIn.signatures.size == (branchIn.attachments.size * branchIn.legalEntities.size))
                     "All attachment signatures are unique" using (branchIn.signatures.size == branchIn.signatures.toSet().size)

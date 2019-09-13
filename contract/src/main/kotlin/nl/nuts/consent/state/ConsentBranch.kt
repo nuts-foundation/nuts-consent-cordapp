@@ -19,6 +19,7 @@
 
 package nl.nuts.consent.state
 
+import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
@@ -50,4 +51,33 @@ data class ConsentBranch(val uuid: UniqueIdentifier,
     override val participants: List<Party> get() = parties.toList()
 
     override fun toString() = linearId.toString()
+
+    @Transient
+    private var _referencedAttachments : Set<SecureHash>? = null
+
+    @Synchronized
+    fun referencedAttachments(attachmentsMap : Map<SecureHash, Attachment>) : Set<SecureHash> {
+
+        if (_referencedAttachments != null) {
+            return _referencedAttachments as Set<SecureHash>
+        }
+
+        val referencedAttachments = mutableSetOf<SecureHash>()
+
+        attachments.forEach {
+            val att = attachmentsMap[it]
+
+            // non existing attachments are triggered by other requirements
+            if (att != null) {
+                val metadata = ConsentContract.extractMetadata(att)
+                if (metadata.previousAttachmentId != null) {
+                    referencedAttachments.add(SecureHash.parse(metadata.previousAttachmentId))
+                }
+            }
+        }
+
+        _referencedAttachments = referencedAttachments
+
+        return referencedAttachments
+    }
 }
