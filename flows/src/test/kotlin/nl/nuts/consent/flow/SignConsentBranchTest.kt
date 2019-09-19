@@ -69,7 +69,7 @@ class SignConsentBranchTest  : GenericFlowTests() {
     }
 
     private fun runAddTransaction(uuid: UniqueIdentifier): SignedTransaction {
-        val flow = ConsentFlows.CreateConsentBranch(uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(UniqueIdentifier(), uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

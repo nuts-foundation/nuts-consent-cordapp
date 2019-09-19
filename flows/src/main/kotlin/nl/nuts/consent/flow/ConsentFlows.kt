@@ -116,7 +116,7 @@ object ConsentFlows {
      */
     @InitiatingFlow
     @StartableByRPC
-    class CreateConsentBranch(val consentStateUuid:UniqueIdentifier, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
+    class CreateConsentBranch(val consentBranchUUID: UniqueIdentifier, val consentStateUuid:UniqueIdentifier, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -171,7 +171,7 @@ object ConsentFlows {
 
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val newState = ConsentBranch(UniqueIdentifier(externalId = consentStateUuid.externalId), consentStateUuid, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
+            val newState = ConsentBranch(consentBranchUUID, consentStateUuid, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(consentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
