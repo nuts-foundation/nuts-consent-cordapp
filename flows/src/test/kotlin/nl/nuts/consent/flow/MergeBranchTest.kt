@@ -27,6 +27,7 @@ import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
+import java.util.*
 import kotlin.test.assertEquals
 
 class MergeBranchTest : GenericFlowTests() {
@@ -61,7 +62,7 @@ class MergeBranchTest : GenericFlowTests() {
     }
 
     private fun runAddTransaction(uuid: UniqueIdentifier): SignedTransaction {
-        val flow = ConsentFlows.CreateConsentBranch(UniqueIdentifier(), uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.startFlow(flow)
         network.runNetwork()
         return future.getOrThrow()

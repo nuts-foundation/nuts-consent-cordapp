@@ -40,6 +40,7 @@ import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.contract.ConsentContract
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
+import java.util.*
 
 /**
  * Collection of ConsentRequest flows: New, Accept, Finalize with their counter parties
@@ -116,7 +117,7 @@ object ConsentFlows {
      */
     @InitiatingFlow
     @StartableByRPC
-    class CreateConsentBranch(val consentBranchUUID: UniqueIdentifier, val consentStateUuid:UniqueIdentifier, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
+    class CreateConsentBranch(val consentBranchUUID: UUID, val consentStateUuid:UniqueIdentifier, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -171,7 +172,7 @@ object ConsentFlows {
 
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val newState = ConsentBranch(consentBranchUUID, consentStateUuid, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
+            val newState = ConsentBranch(UniqueIdentifier(id = consentBranchUUID, externalId = consentStateUuid.externalId), consentStateUuid, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(consentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
