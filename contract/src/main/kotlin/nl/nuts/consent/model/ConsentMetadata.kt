@@ -38,7 +38,13 @@ data class ConsentMetadata (
     @JsonProperty("previousAttachmentId") val previousAttachmentId: String? = null,
 
     @get:NotNull
-    @JsonProperty("period") val period: Period
+    @JsonProperty("period") val period: Period,
+
+    /**
+     * The SHA256 of the unencrypted consent record. Used to detect duplicates inside a Corda transaction
+     */
+    @get:NotNull
+    @JsonProperty("consentRecordHash") val consentRecordHash: String
 ) {
     fun verify() {
         requireThat {

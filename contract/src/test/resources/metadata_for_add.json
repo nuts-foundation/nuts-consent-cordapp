@@ -14,5 +14,6 @@
   "period" : {
     "validFrom": "2019-01-01",
     "validTo": "2020-01-01"
-  }
+  },
+  "consentRecordHash": "hash"
 }

@@ -195,6 +195,35 @@ class AddCommandTest : ConsentContractTest() {
     }
 
     @Test
+    fun `AddCommand must have at least 1 attachment (2)`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = newAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                input(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentState(consentStateUuid, 1, setOf(attHash), setOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentState(consentStateUuid, 2, setOf(attHash), setOf(homeCare.party, generalCare.party))
+                )
+                output(
+                        ConsentContract.CONTRACT_ID,
+                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                        listOf(homeCare.publicKey, generalCare.publicKey),
+                        ConsentContract.ConsentCommands.AddCommand()
+                )
+                `fails with`("ConsentBranch must add new attachments")
+            }
+        }
+    }
+
+    @Test
     fun `AddCommand must include the attachment`() {
         ledgerServices.ledger {
             val attachmentInputStream = newAttachment.inputStream()
