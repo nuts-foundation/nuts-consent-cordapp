@@ -40,44 +40,21 @@ import nl.nuts.consent.contract.AttachmentSignature
  * @param parties involved parties
  */
 @BelongsToContract(ConsentContract::class)
-data class ConsentBranch(val uuid: UniqueIdentifier,
-                         val branchPoint: UniqueIdentifier,
-                         val attachments: Set<SecureHash>,
-                         val legalEntities: Set<String>,
-                         val signatures: List<AttachmentSignature>,
-                         val parties: Set<Party> = HashSet()) : LinearState {
+class ConsentBranch : ConsentBase {
 
-    override val linearId: UniqueIdentifier get() = uuid
-    override val participants: List<Party> get() = parties.toList()
+    val branchPoint : UniqueIdentifier
+    val legalEntities: Set<String>
+    val signatures: List<AttachmentSignature>
 
-    override fun toString() = linearId.toString()
+    constructor(uuid: UniqueIdentifier, branchPoint: UniqueIdentifier, attachments: Set<SecureHash>, legalEntities: Set<String>,
+                signatures: List<AttachmentSignature>, parties: Set<Party> = emptySet()) : super(uuid, attachments, parties) {
+        this.branchPoint = branchPoint
+        this.legalEntities = legalEntities
+        this.signatures = signatures
+    }
 
-    @Transient
-    private var _referencedAttachments : Set<SecureHash>? = null
-
-    @Synchronized
-    fun referencedAttachments(attachmentsMap : Map<SecureHash, Attachment>) : Set<SecureHash> {
-
-        if (_referencedAttachments != null) {
-            return _referencedAttachments as Set<SecureHash>
-        }
-
-        val referencedAttachments = mutableSetOf<SecureHash>()
-
-        attachments.forEach {
-            val att = attachmentsMap[it]
-
-            // non existing attachments are triggered by other requirements
-            if (att != null) {
-                val metadata = ConsentContract.extractMetadata(att)
-                if (metadata.previousAttachmentId != null) {
-                    referencedAttachments.add(SecureHash.parse(metadata.previousAttachmentId))
-                }
-            }
-        }
-
-        _referencedAttachments = referencedAttachments
-
-        return referencedAttachments
+    fun copy(uuid: UniqueIdentifier = this.uuid, branchPoint: UniqueIdentifier = this.branchPoint, attachments: Set<SecureHash> = this.attachments,
+             legalEntities: Set<String> = this.legalEntities, signatures: List<AttachmentSignature> = this.signatures, parties: Set<Party> = this.parties) : ConsentBranch {
+        return ConsentBranch(uuid, branchPoint, attachments, legalEntities, signatures, parties)
     }
 }

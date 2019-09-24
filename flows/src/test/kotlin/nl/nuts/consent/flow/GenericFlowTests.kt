@@ -28,6 +28,7 @@ import org.junit.Before
 import java.io.File
 
 const val VALID_META_ZIP_PATH = "src/test/resources/valid_metadata_for_add.zip"
+const val VALID_META_ZIP_PATH_DUP = "src/test/resources/valid_metadata_for_add_dup.zip"
 const val VALID_META_ZIP_PATH2 = "src/test/resources/valid_metadata.zip"
 const val VALID_META_ZIP_PATH3 = "src/test/resources/valid_metadata_for_add2.zip"
 
@@ -49,6 +50,7 @@ abstract class GenericFlowTests {
     }
 
     protected var validHashAdd1: SecureHash? = null
+    protected var validHashDup: SecureHash? = null
     protected var validHashUpd: SecureHash? = null
     protected var validHashAdd2: SecureHash? = null
 
@@ -56,6 +58,7 @@ abstract class GenericFlowTests {
     open fun setup() {
         network.runNetwork()
         validHashAdd1 = a.services.attachments.importAttachment(File(VALID_META_ZIP_PATH).inputStream(), a.info.legalIdentities.first().name.toString(), null)
+        validHashDup = a.services.attachments.importAttachment(File(VALID_META_ZIP_PATH_DUP).inputStream(), a.info.legalIdentities.first().name.toString(), null)
         validHashUpd = a.services.attachments.importAttachment(File(VALID_META_ZIP_PATH2).inputStream(), a.info.legalIdentities.first().name.toString(), null)
         validHashAdd2 = a.services.attachments.importAttachment(File(VALID_META_ZIP_PATH3).inputStream(), a.info.legalIdentities.first().name.toString(), null)
     }

@@ -19,11 +19,23 @@
 
 package nl.nuts.consent.flow
 
+import net.corda.core.contracts.Command
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.CollectSignaturesFlow
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.SendStateAndRefFlow
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
+import nl.nuts.consent.contract.ConsentContract
+import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import java.util.*
@@ -35,7 +47,7 @@ class CreateConsentBranchTest : GenericFlowTests() {
     fun `recorded transaction has 1 input, 2 outputs and a single attachment`() {
         val genesisTx = runGenesisTransaction("addConsentTest-1")
         val genesisState = genesisTx.tx.outputStates.first() as ConsentState
-        val signedTx = runCorrectTransaction(genesisState.uuid)
+        val signedTx = runCorrectTransaction(genesisState.linearId)
 
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {

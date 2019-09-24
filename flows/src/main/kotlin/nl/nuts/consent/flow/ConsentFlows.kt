@@ -27,6 +27,7 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
@@ -35,9 +36,11 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
-import net.corda.node.internal.AbstractNode
+import net.corda.core.utilities.unwrap
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.contract.ConsentContract
+import nl.nuts.consent.contract.ConsentContract.Companion.extractMetadata
+import nl.nuts.consent.state.ConsentBase
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import java.util.*
@@ -49,6 +52,26 @@ object ConsentFlows {
 
     fun referencedAttachments(state : ConsentBranch, serviceHub: ServiceHub) : Set<SecureHash> {
         return state.referencedAttachments(state.attachments.map { it to serviceHub.attachments.openAttachment(it)!! }.toMap())
+    }
+
+    private fun containedConsentRecordHash(state : ConsentBase, serviceHub: ServiceHub) : Set<String> {
+        return state.attachments.map {
+            val att = serviceHub.attachments.openAttachment(it)!!
+            val metadata = extractMetadata(att)
+            metadata.consentRecordHash
+        }.toSet()
+    }
+
+    /**
+     * A check for duplicate attachments, this is done outside the contract because the contents of the attachments is required
+     */
+    fun raiseOnDuplicateConsentRecords(consentState: ConsentState, consentBranch: ConsentBranch, serviceHub: ServiceHub, side:String = "origin") {
+        val consentRecordHashInState = containedConsentRecordHash(consentState, serviceHub)
+        val consentRecordHashInBranch = containedConsentRecordHash(consentBranch, serviceHub)
+
+        if (consentRecordHashInBranch.intersect(consentRecordHashInState).isNotEmpty()) {
+            throw FlowException("ConsentBranch contains 1 or more records already present in ConsentState, detected at $side")
+        }
     }
 
     /**
@@ -117,7 +140,7 @@ object ConsentFlows {
      */
     @InitiatingFlow
     @StartableByRPC
-    class CreateConsentBranch(val consentBranchUUID: UUID, val consentStateUuid:UniqueIdentifier, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
+    open class CreateConsentBranch(val consentBranchUUID: UUID, val consentStateUuid:UniqueIdentifier, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -127,6 +150,7 @@ object ConsentFlows {
             object GENERATING_TRANSACTION : Step("Generating transaction based on new consent request.")
             object VERIFYING_TRANSACTION : Step("Verifying contract constraints.")
             object SIGNING_TRANSACTION : Step("Signing transaction with our private key.")
+            object SENDING_DATA : Step("Sending required data for other parties to be able to verify.")
             object GATHERING_SIGS : Step("Gathering the counterparty's signature.") {
                 override fun childProgressTracker() = CollectSignaturesFlow.tracker()
             }
@@ -140,6 +164,7 @@ object ConsentFlows {
                     GENERATING_TRANSACTION,
                     VERIFYING_TRANSACTION,
                     SIGNING_TRANSACTION,
+                    SENDING_DATA,
                     GATHERING_SIGS,
                     FINALISING_TRANSACTION
             )
@@ -183,35 +208,39 @@ object ConsentFlows {
                 txBuilder.addCommand(Command(ConsentContract.ConsentCommands.AddCommand(), newState.participants.map { it.owningKey }))
             }
 
-            val referencedAttachments = referencedAttachments(newState, serviceHub)
-            if (referencedAttachments.isNotEmpty()) {
+            val referencedAttachmentsInBranch = referencedAttachments(newState, serviceHub)
+            if (referencedAttachmentsInBranch.isNotEmpty()) {
                 txBuilder.addCommand(Command(ConsentContract.ConsentCommands.UpdateCommand(), newState.participants.map { it.owningKey }))
-                //referencedAttachments.forEach{txBuilder.addAttachment(it)}
             }
 
             // add all attachments to transaction
             attachments.forEach { txBuilder.addAttachment(it) }
 
             progressTracker.currentStep = VERIFYING_TRANSACTION
-            // Verify that the transaction is valid.
+            // Verify that the transaction is valid according to contract.
             txBuilder.verify(serviceHub)
+            // Compare consentRecordHash of new and existing records
+            raiseOnDuplicateConsentRecords(consentStateRef.state.data, newState, serviceHub)
 
             progressTracker.currentStep = SIGNING_TRANSACTION
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
 
-            progressTracker.currentStep = GATHERING_SIGS
+            progressTracker.currentStep = SENDING_DATA
             var otherPartySessions = parties.map { initiateFlow(it) }
+            otherPartySessions.map { subFlow(SendStateAndRefFlow(it, listOf(consentStateRef))) }
+
+            progressTracker.currentStep = GATHERING_SIGS
             val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, otherPartySessions, GATHERING_SIGS.childProgressTracker()))
 
             progressTracker.currentStep = FINALISING_TRANSACTION
             return subFlow(FinalityFlow(fullySignedTx, otherPartySessions, FINALISING_TRANSACTION.childProgressTracker()))
         }
 
-        private fun hasNew() : Boolean {
+        protected fun hasNew() : Boolean {
             this.attachments.forEach {
                 val att = serviceHub.attachments.openAttachment(it) ?: throw FlowException("Unknown attachment $it")
 
-                val metadata = ConsentContract.extractMetadata(att)
+                val metadata = extractMetadata(att)
                 if (metadata.previousAttachmentId == null) {
                     return true
                 }
@@ -228,9 +257,25 @@ object ConsentFlows {
     class AcceptCreateConsentBranch(val askingPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
+
+            // also resolves tx history
+            val untrustworthyData = subFlow(ReceiveStateAndRefFlow<ConsentState>(askingPartySession))
+
+            requireThat {
+                "a single stateRef has been send" using (untrustworthyData.size == 1)
+            }
+
             val signTransactionFlow = object : SignTransactionFlow(askingPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) {
+                    requireThat {
+                        "a single ConsentState is consumed" using (stx.inputs.size == 1)
+                        "a single ConsentBranch is produced" using (stx.coreTransaction.outRefsOfType<ConsentBranch>().size == 1)
+                        "the received ref equals the input ref" using (untrustworthyData[0].ref == stx.inputs[0])
+                    }
+                    val consentBranch = stx.coreTransaction.outRefsOfType<ConsentBranch>()[0].state.data
 
+                    // check for duplicates at other nodes as well
+                    raiseOnDuplicateConsentRecords(untrustworthyData[0].state.data, consentBranch, serviceHub, "counter party")
                 }
             }
             val txId = subFlow(signTransactionFlow).id
@@ -404,7 +449,7 @@ object ConsentFlows {
             val consentStateAttachmentsToKeep = consentState.attachments.filter { !referenceAttachments.contains(it) }.toSet()
 
             val newState = ConsentState(
-                    uuid = consentRef.state.data.uuid,
+                    uuid = consentRef.state.data.linearId,
                     version = consentState.version + 1,
                     attachments = consentStateAttachmentsToKeep + branchState.attachments,
                     parties = branchState.parties)

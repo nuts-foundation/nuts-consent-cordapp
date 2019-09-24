@@ -53,7 +53,7 @@ class CreateGenesisConsentStateTest : GenericFlowTests() {
         assertEquals(1, attachments.size) // the first attachment is the contract and state jar
 
         val recordedState = txOutputs[0].data as ConsentState
-        assertEquals("externalId", recordedState.uuid.externalId)
+        assertEquals("externalId", recordedState.linearId.externalId)
     }
 
     @Test

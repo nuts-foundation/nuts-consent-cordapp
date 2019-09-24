@@ -35,10 +35,10 @@ class MergeBranchTest : GenericFlowTests() {
     fun `recorded transaction has 1 input, 1 outputs and a single attachment`() {
         val genesisTx = runGenesisTransaction("mergeConsentTest-1")
         val genesisState = genesisTx.tx.outputStates.first() as ConsentState
-        val branchTx = runAddTransaction(genesisState.uuid)
+        val branchTx = runAddTransaction(genesisState.linearId)
         val branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
-        runSignTransaction(branchState.uuid)
-        val signedTx = runMergeTransaction(branchState.uuid)
+        runSignTransaction(branchState.linearId)
+        val signedTx = runMergeTransaction(branchState.linearId)
 
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {

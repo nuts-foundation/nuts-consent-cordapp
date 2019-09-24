@@ -160,7 +160,7 @@ class ConsentContract : Contract {
                     "Output state has the same UUID as input state" using (consentOut.linearId == consentIn.linearId)
                     "Version number is 1 more" using (consentOut.version - consentIn.version == 1)
 
-                    "ConsentBranch has the same externalId as ConsentState" using (consentOut.linearId.externalId == branchOut.uuid.externalId)
+                    "ConsentBranch has the same externalId as ConsentState" using (consentOut.linearId.externalId == branchOut.linearId.externalId)
 
                     "All new participants are unique" using (branchOut.participants.toSet().size == branchOut.participants.size)
                     "All new participants must be signers" using (command.signers.containsAll(branchOut.participants.map { it.owningKey }))

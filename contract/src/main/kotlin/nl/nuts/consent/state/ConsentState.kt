@@ -41,18 +41,22 @@ import nl.nuts.consent.schema.ConsentSchemaV1
  */
 @CordaSerializable
 @BelongsToContract(ConsentContract::class)
-data class ConsentState(
-        val uuid: UniqueIdentifier,
-        val version: Int,
-        val attachments: Set<SecureHash> = emptySet(),
-        val parties: Set<Party> = emptySet()) : LinearState, QueryableState {
+class ConsentState : ConsentBase, QueryableState {
 
-    override val linearId: UniqueIdentifier get() = uuid
-    override val participants: List<Party> get() = parties.toList()
+    val version: Int
 
-    override fun toString() = "${uuid.toString()}_${version}"
+    constructor(uuid: UniqueIdentifier, version: Int, attachments: Set<SecureHash> = emptySet(), parties: Set<Party> = emptySet()) : super(uuid, attachments, parties) {
+        this.version = version
+    }
 
-    override fun generateMappedObject(schema: MappedSchema): PersistentState = ConsentSchemaV1.PersistentConsent(uuid, version)
+    override fun toString() = "${linearId}_${version}"
+
+    override fun generateMappedObject(schema: MappedSchema): PersistentState = ConsentSchemaV1.PersistentConsent(linearId, version)
 
     override fun supportedSchemas(): Iterable<MappedSchema> =  listOf(ConsentSchemaV1)
+
+    fun copy(uuid: UniqueIdentifier = this.uuid, version: Int = this.version,
+             attachments: Set<SecureHash> = this.attachments, parties: Set<Party> = this.parties) : ConsentState {
+        return ConsentState(uuid, version, attachments, parties)
+    }
 }

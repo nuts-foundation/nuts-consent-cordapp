@@ -33,17 +33,17 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class MultipleCommandTest  : GenericFlowTests() {
+class MultipleCommandTest : GenericFlowTests() {
     @Test
     fun `Branching with both an Add and Update Command has 1 input, 2 outputs and three attachments`() {
         val genesisTx = runGenesisTransaction("mergeConsentTest-1")
         val genesisState = genesisTx.tx.outputStates.first() as ConsentState
-        val branchTx = runAddTransaction(genesisState.uuid)
+        val branchTx = runAddTransaction(genesisState.linearId)
         val branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
-        runSignTransaction(branchState.uuid, validHashAdd1!!)
-        runMergeTransaction(branchState.uuid)
+        runSignTransaction(branchState.linearId, validHashAdd1!!)
+        runMergeTransaction(branchState.linearId)
 
-        val signedTx = runBranchTransaction(genesisState.uuid)
+        val signedTx = runBranchTransaction(genesisState.linearId)
 
                 // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {
@@ -63,15 +63,15 @@ class MultipleCommandTest  : GenericFlowTests() {
     fun `Branching and merging with both an Add and Update`() {
         val genesisTx = runGenesisTransaction("mergeConsentTest-2")
         val genesisState = genesisTx.tx.outputStates.first() as ConsentState
-        var branchTx = runAddTransaction(genesisState.uuid)
+        var branchTx = runAddTransaction(genesisState.linearId)
         var branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
-        runSignTransaction(branchState.uuid, validHashAdd1!!)
-        runMergeTransaction(branchState.uuid)
-        branchTx = runBranchTransaction(genesisState.uuid)
+        runSignTransaction(branchState.linearId, validHashAdd1!!)
+        runMergeTransaction(branchState.linearId)
+        branchTx = runBranchTransaction(genesisState.linearId)
         branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
-        runSignTransaction(branchState.uuid, validHashAdd2!!)
-        runSignTransaction(branchState.uuid, validHashUpd!!)
-        val signedTx = runMergeTransaction(branchState.uuid)
+        runSignTransaction(branchState.linearId, validHashAdd2!!)
+        runSignTransaction(branchState.linearId, validHashUpd!!)
+        val signedTx = runMergeTransaction(branchState.linearId)
 
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {
@@ -91,29 +91,29 @@ class MultipleCommandTest  : GenericFlowTests() {
     fun `Conflicting merge`() {
         val genesisTx = runGenesisTransaction("mergeConsentTest-2")
         val genesisState = genesisTx.tx.outputStates.first() as ConsentState
-        var branchTx = runAddTransaction(genesisState.uuid)
+        var branchTx = runAddTransaction(genesisState.linearId)
         var branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
-        runSignTransaction(branchState.uuid, validHashAdd1!!)
-        runMergeTransaction(branchState.uuid)
+        runSignTransaction(branchState.linearId, validHashAdd1!!)
+        runMergeTransaction(branchState.linearId)
 
         // branch 1
-        branchTx = runBranchTransaction(genesisState.uuid)
+        branchTx = runBranchTransaction(genesisState.linearId)
         branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
-        runSignTransaction(branchState.uuid, validHashAdd2!!)
-        runSignTransaction(branchState.uuid, validHashUpd!!)
+        runSignTransaction(branchState.linearId, validHashAdd2!!)
+        runSignTransaction(branchState.linearId, validHashUpd!!)
 
         // branch 2
-        val branchTx2 = runBranchTransaction(genesisState.uuid)
+        val branchTx2 = runBranchTransaction(genesisState.linearId)
         val branchState2 = branchTx2.tx.outputsOfType<ConsentBranch>().first()
-        runSignTransaction(branchState2.uuid, validHashAdd2!!)
-        runSignTransaction(branchState2.uuid, validHashUpd!!)
+        runSignTransaction(branchState2.linearId, validHashAdd2!!)
+        runSignTransaction(branchState2.linearId, validHashUpd!!)
 
         //ok
-        runMergeTransaction(branchState.uuid)
+        runMergeTransaction(branchState.linearId)
 
         // fails due to missing attachment on input state
         assertFailsWith(FlowException::class) {
-            runMergeTransaction(branchState2.uuid)
+            runMergeTransaction(branchState2.linearId)
         }
     }
 
