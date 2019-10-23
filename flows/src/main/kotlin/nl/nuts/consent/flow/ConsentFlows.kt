@@ -178,7 +178,10 @@ object ConsentFlows {
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
             // names to Party
-            val parties = peers.map{ serviceHub.networkMapCache.getPeerByLegalName(it)!! }.toMutableSet()
+            val parties = peers.map{
+                serviceHub.networkMapCache.getPeerByLegalName(it) ?: throw FlowException("Unknown peer node: ${it.commonName}")
+            }.toMutableSet()
+
             parties.remove(serviceHub.myInfo.legalIdentities.first())
 
             progressTracker.currentStep = FINDING_PREVIOUS_STATE

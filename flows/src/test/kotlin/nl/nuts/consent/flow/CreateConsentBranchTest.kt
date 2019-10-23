@@ -19,23 +19,12 @@
 
 package nl.nuts.consent.flow
 
-import net.corda.core.contracts.Command
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.CollectSignaturesFlow
-import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
-import net.corda.core.flows.SendStateAndRefFlow
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
-import nl.nuts.consent.contract.ConsentContract
-import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import java.util.*
@@ -67,6 +56,19 @@ class CreateConsentBranchTest : GenericFlowTests() {
     fun `transaction fails for unknown id`() {
         assertFailsWith(FlowException::class) {
             runCorrectTransaction(UniqueIdentifier())
+        }
+    }
+
+    @Test
+    fun `transaction fails for unknown peer`() {
+        val genesisTx = runGenesisTransaction("addConsentTest-2")
+        val genesisState = genesisTx.tx.outputStates.first() as ConsentState
+
+        assertFailsWith(FlowException::class) {
+            val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), genesisState.linearId, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(CordaX500Name.parse("C=NL,O=Nuts,L=Enschede")))
+            val future = a.startFlow(flow)
+            network.runNetwork()
+            future.getOrThrow()
         }
     }
 
