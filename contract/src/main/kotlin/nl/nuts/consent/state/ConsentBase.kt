@@ -29,7 +29,7 @@ import nl.nuts.consent.contract.ConsentContract
 /**
  * Common logic for both ConsentState and ConsentBranch
  */
-abstract class ConsentBase(protected val uuid: UniqueIdentifier,
+abstract class ConsentBase(val uuid: UniqueIdentifier,
                            val attachments: Set<SecureHash> = emptySet(),
                            val parties: Set<Party> = emptySet()) : LinearState {
     override val linearId: UniqueIdentifier get() = uuid
