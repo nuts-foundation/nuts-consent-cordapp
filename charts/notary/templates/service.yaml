@@ -12,9 +12,9 @@ spec:
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: http
+      targetPort: {{ .Values.service.port }}
       protocol: TCP
-      name: http
+      name: nuts
   selector:
     app: {{ template "notary.name" . }}
     release: {{ .Release.Name }}
