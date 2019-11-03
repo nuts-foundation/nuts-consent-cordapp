@@ -1,0 +1,85 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "notary.fullname" . }}
+  labels:
+    app: {{ template "notary.name" . }}
+    chart: {{ template "notary.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "notary.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "notary.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      initContainers:
+        - name: "set-working-dir"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ['cp', '-r', '/opt/nuts/', '/opt/nuts-working-dir/']
+          volumeMounts:
+            - name: config-volume1
+              mountPath: /opt/nuts/node.conf
+              subPath: node.conf
+            - name: config-volume2
+              mountPath: /opt/nuts/network-parameters
+              subPath: network-parameters
+            - name: config-volume3
+              mountPath: /opt/nuts/nodeInfo-74A33A2848FC5E331B61005443ED44CB4A047F49167A3D9850BA81296A4EDAFF
+              subPath: nodeInfo-74A33A2848FC5E331B61005443ED44CB4A047F49167A3D9850BA81296A4EDAFF
+            - name: network-volume
+              mountPath: /opt/nuts/additional-node-infos
+            - name: secret-volume
+              mountPath: /opt/nuts/certificates
+            - name: working-dir-volume
+              mountPath: /opt/nuts-working-dir
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: nuts
+              containerPort: 7886
+              protocol: TCP
+          volumeMounts:
+            - name: working-dir-volume
+              mountPath: /opt
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+        - name: config-volume1
+          configMap:
+            name: notary-config
+        - name: config-volume2
+          configMap:
+            name: notary-config
+        - name: config-volume3
+          configMap:
+            name: notary-config
+        - name: network-volume
+          configMap:
+            name: network-nodes
+        - name: secret-volume
+          secret:
+            secretName: notary-keys
+        - name: working-dir-volume
+          persistentVolumeClaim:
+            claimName: working-dir
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
