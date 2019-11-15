@@ -20,8 +20,8 @@
 buildscript {
     ext {
         kotlinVersion = '1.2.71'
-        corda = '4.1'
-        cordaGradlePluginsVersion = '4.0.25'
+        corda = '4.3'
+        cordaGradlePluginsVersion = '5.0.5'
     }
 
     repositories {
@@ -53,7 +53,10 @@ allprojects {
         maven {
             url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/"
         }
-
+        maven {
+            url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies/"
+        }
+        maven { url 'https://jitpack.io' }
         maven {
             url "https://repo.gradle.org/gradle/libs-releases-local/"
         }
@@ -69,6 +72,9 @@ allprojects {
     version = "0.10.0"
     group = "nl.nuts.consent.cordapp"
     cordapp.info.vendor = "Nuts community"
+    cordapp.targetPlatformVersion = 4
+
+    targetCompatibility = JavaVersion.VERSION_11
 
     configurations {
         implementation {
@@ -89,8 +95,10 @@ allprojects {
         }
     }
     test {
-        jvmArgs "-javaagent:${project.rootDir}/lib/quasar.jar",
-                "-Dco.paralleluniverse.fibers.verifyInstrumentation=false"
+//        jvmArgs "-javaagent:${project.rootDir}/lib/quasar-core-0.8.0.jar",
+//                "-Dco.paralleluniverse.fibers.verifyInstrumentation=false",
+//                "-DquasarVersion=0.8.0",
+//                "-DquasarClassifier"
     }
     task javadocJar(type: Jar) {
         classifier = 'javadoc'
