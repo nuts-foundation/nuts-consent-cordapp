@@ -25,21 +25,28 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
+import net.corda.node.services.statemachine.StaffedFlowHospital
+import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.startFlow
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import java.sql.SQLException
 import javax.persistence.PersistenceException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CreateGenesisConsentStateTest : GenericFlowTests() {
 
     @Test
     fun `recorded transaction has no inputs, a single output and no additional attachments`() {
         val flow = ConsentFlows.CreateGenesisConsentState("externalId")
-        val future = a.startFlow(flow)
+        val future = a.services.startFlow(flow)
         network.runNetwork()
-        val signedTx =  future.getOrThrow()
+        val signedTx =  future.resultFuture.getOrThrow()
 
         // We check the recorded transaction in the vault.
         val recordedTx = a.services.validatedTransactions.getTransaction(signedTx.id)
@@ -59,17 +66,21 @@ class CreateGenesisConsentStateTest : GenericFlowTests() {
     @Test
     fun `2nd transaction for externalId fails`() {
         runTransaction("unique")
-        assertFailsWith(PersistenceException::class) {
-            runTransaction("unique")
-        }
+
+        val flow = ConsentFlows.CreateGenesisConsentState("unique")
+        a.services.startFlow(flow)
+        network.runNetwork()
+
+        assertTrue(a.smm.flowHospital.contains(flowId = flow.runId))
     }
 
     @Test
     fun `duplicate transaction for externalId results in 1 vault state`() {
         runTransaction("unique-3")
-        assertFailsWith(PersistenceException::class) {
-            runTransaction("unique-3")
-        }
+
+        val flow = ConsentFlows.CreateGenesisConsentState("unique-3")
+        a.services.startFlow(flow)
+        network.runNetwork()
 
         // 1 result
         val results = builder {
@@ -86,8 +97,10 @@ class CreateGenesisConsentStateTest : GenericFlowTests() {
 
     private fun runTransaction(externalId: String) : SignedTransaction {
         val flow = ConsentFlows.CreateGenesisConsentState(externalId)
-        val future = a.startFlow(flow)
+        val future = a.services.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+
+        // the transaction has not been completed but is stuck in an error condition waiting to be re-evaluated
+        return future.resultFuture.getOrThrow(1.seconds)
     }
 }

@@ -25,6 +25,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.startFlow
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
 import java.util.*
@@ -66,23 +67,23 @@ class CreateConsentBranchTest : GenericFlowTests() {
 
         assertFailsWith(FlowException::class) {
             val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), genesisState.linearId, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(CordaX500Name.parse("C=NL,O=Nuts,L=Enschede")))
-            val future = a.startFlow(flow)
+            val future = a.services.startFlow(flow)
             network.runNetwork()
-            future.getOrThrow()
+            future.resultFuture.getOrThrow()
         }
     }
 
     private fun runGenesisTransaction(externalId: String) : SignedTransaction {
         val flow = ConsentFlows.CreateGenesisConsentState(externalId)
-        val future = a.startFlow(flow)
+        val future = a.services.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+        return future.resultFuture.getOrThrow()
     }
 
     private fun runCorrectTransaction(uuid: UniqueIdentifier) : SignedTransaction {
         val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
-        val future = a.startFlow(flow)
+        val future = a.services.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+        return future.resultFuture.getOrThrow()
     }
 }
