@@ -44,6 +44,7 @@ import nl.nuts.consent.state.ConsentBase
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import java.util.*
+import javax.persistence.PersistenceException
 
 /**
  * Collection of ConsentRequest flows: New, Accept, Finalize with their counter parties
@@ -122,9 +123,8 @@ object ConsentFlows {
             progressTracker.currentStep = SIGNING_TRANSACTION
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
 
-            //store(consentState.uuid)
-
             progressTracker.currentStep = FINALISING_TRANSACTION
+
             return subFlow(FinalityFlow(partSignedTx, emptySet<FlowSession>(), FINALISING_TRANSACTION.childProgressTracker()))
         }
     }

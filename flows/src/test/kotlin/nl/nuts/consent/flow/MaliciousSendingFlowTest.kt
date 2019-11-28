@@ -35,6 +35,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.startFlow
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.contract.ConsentContract
 import nl.nuts.consent.flow.ConsentFlows.CreateConsentBranch.Companion.FINALISING_TRANSACTION
@@ -93,38 +94,38 @@ class MaliciousSendingFlowTest : GenericFlowTests() {
 
     private fun runGenesisTransaction(externalId: String): SignedTransaction {
         val flow = ConsentFlows.CreateGenesisConsentState(externalId)
-        val future = a.startFlow(flow)
+        val future = a.services.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+        return future.resultFuture.getOrThrow()
     }
 
     private fun runAddTransaction(uuid: UniqueIdentifier, hash:Set<SecureHash> = setOf(validHashAdd1!!)): SignedTransaction {
         val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, hash, setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
-        val future = a.startFlow(flow)
+        val future = a.services.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+        return future.resultFuture.getOrThrow()
     }
 
     private fun runMaliciousAddTransaction(uuid: UniqueIdentifier, hash:Set<SecureHash> = setOf(validHashAdd1!!)): SignedTransaction {
         val flow = MaliciousCreateConsentBranch(UUID.randomUUID(), uuid, hash, setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
-        val future = a.startFlow(flow)
+        val future = a.services.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+        return future.resultFuture.getOrThrow()
     }
 
     private fun runSignTransaction(uuid: UniqueIdentifier, attHash: SecureHash): SignedTransaction {
         val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", attHash, b.services.keyManagementService.sign(attHash.bytes, b.info.legalIdentities.first().owningKey))
         val flow = ConsentFlows.SignConsentBranch(uuid, listOf(attSig))
-        val future = b.startFlow(flow)
+        val future = b.services.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+        return future.resultFuture.getOrThrow()
     }
 
     private fun runMergeTransaction(uuid: UniqueIdentifier): SignedTransaction {
         val flow = ConsentFlows.MergeBranch(uuid)
-        val future = a.startFlow(flow)
+        val future = a.services.startFlow(flow)
         network.runNetwork()
-        return future.getOrThrow()
+        return future.resultFuture.getOrThrow()
     }
 
 

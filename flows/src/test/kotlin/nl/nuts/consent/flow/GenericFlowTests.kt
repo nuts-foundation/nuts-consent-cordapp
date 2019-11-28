@@ -20,9 +20,11 @@
 package nl.nuts.consent.flow
 
 import net.corda.core.crypto.SecureHash
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.TestCordapp
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.cordappWithPackages
 import org.junit.After
 import org.junit.Before
 import java.io.File
@@ -33,13 +35,14 @@ const val VALID_META_ZIP_PATH2 = "src/test/resources/valid_metadata.zip"
 const val VALID_META_ZIP_PATH3 = "src/test/resources/valid_metadata_for_add2.zip"
 
 abstract class GenericFlowTests {
-    protected val network = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(
-            TestCordapp.findCordapp("nl.nuts.consent.flow"),
-            TestCordapp.findCordapp("nl.nuts.consent.contract")
-    )))
+    protected val network = InternalMockNetwork(cordappsForAllNodes = listOf(
+            cordappWithPackages("nl.nuts.consent.flow"),
+            cordappWithPackages("nl.nuts.consent.schema"),
+            cordappWithPackages("nl.nuts.consent.contract")
+    ))
 
-    protected val a = network.createPartyNode()
-    protected val b = network.createPartyNode()
+    protected val a = network.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+    protected val b = network.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
 
     init {
         listOf(a, b).forEach {
