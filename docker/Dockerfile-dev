@@ -11,5 +11,5 @@ COPY --from=builder contract/build/libs/contract-0.11.0.jar /opt/nuts/cordapps/c
 COPY --from=builder flows/build/libs/flows-0.11.0.jar /opt/nuts/cordapps/flows-0.11.0.jar
 WORKDIR /opt/nuts
 ENTRYPOINT ["/usr/local/openjdk-8/bin/java"]
-CMD ["-jar", "/opt/nuts/corda.jar", "--network-root-truststore-password=changeit"]
+CMD ["-jar", "/opt/nuts/corda.jar", "--network-root-truststore-password=changeit", "--log-to-console"]
 EXPOSE 7886 7887 7888 2222
