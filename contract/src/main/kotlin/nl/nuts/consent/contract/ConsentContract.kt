@@ -20,6 +20,7 @@
 package nl.nuts.consent.contract
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -30,6 +31,7 @@ import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
+import java.util.*
 import java.util.jar.JarEntry
 
 /**
@@ -62,8 +64,8 @@ class ConsentContract : Contract {
     object Serialisation {
         val _objectMapper : ObjectMapper by lazy {
             val objectMapper = ObjectMapper()
-            objectMapper.registerModule(JavaTimeModule())
-            objectMapper.dateFormat = SimpleDateFormat.getDateInstance()
+            objectMapper.findAndRegisterModules()
+            objectMapper.dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
             objectMapper
         }
 
