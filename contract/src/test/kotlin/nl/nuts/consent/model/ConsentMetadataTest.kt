@@ -23,28 +23,30 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import org.junit.BeforeClass
 import org.junit.Test
-import java.lang.IllegalArgumentException
 import java.text.SimpleDateFormat
-import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+
 
 class ConsentMetadataTest {
     companion object {
         val objectMapper = ObjectMapper()
 
         @BeforeClass @JvmStatic fun setup() {
-            objectMapper.registerModule(JavaTimeModule())
-            objectMapper.dateFormat = SimpleDateFormat.getDateInstance()
+            objectMapper.findAndRegisterModules()
+            objectMapper.dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
         }
     }
 
     @Test
     fun `ConsentMetadata period serialises correctly`() {
-        val m1 = sdm()
+        val now = OffsetDateTime.now(ZoneOffset.UTC)
+        val m1 = sdm(now)
 
-        assertEquals(LocalDate.now(), m1.period.validFrom)
-        assertEquals(LocalDate.now().plusDays(1), m1.period.validTo)
+        assertEquals(now, m1.period.validFrom)
+        assertEquals(now.plusDays(1), m1.period.validTo)
     }
 
     @Test
@@ -77,7 +79,7 @@ class ConsentMetadataTest {
 
     @Test(expected = Test.None::class)
     fun `verify does not raise for valid ConsentMetadata`() {
-        val m1 = createMetadata()
+        val m1 = createMetadata(OffsetDateTime.now())
 
         m1.verify()
     }
@@ -85,7 +87,7 @@ class ConsentMetadataTest {
     @Test
     fun `verify raises for empty domain list`() {
         // period
-        val period = Period(LocalDate.now(), LocalDate.now().plusDays(1))
+        val period = Period(OffsetDateTime.now(), OffsetDateTime.now().plusDays(1))
 
         // symmetric key
         val secureKey = SymmetricKey("AES_GCM_256", "567898==")
@@ -103,7 +105,7 @@ class ConsentMetadataTest {
     @Test
     fun `verify raises for empty organisation secure keys`() {
         // period
-        val period = Period(LocalDate.now(), LocalDate.now().plusDays(1))
+        val period = Period(OffsetDateTime.now(), OffsetDateTime.now().plusDays(1))
 
         // symmetric key
         val secureKey = SymmetricKey("AES_GCM_256", "567898==")
@@ -118,7 +120,7 @@ class ConsentMetadataTest {
     @Test
     fun `verify raises for invalid period`() {
         // period
-        val period = Period(LocalDate.now(), LocalDate.now().minusDays(1))
+        val period = Period(OffsetDateTime.now(), OffsetDateTime.now().minusDays(1))
 
         // symmetric key
         val secureKey = SymmetricKey("AES_GCM_256", "567898==")
@@ -136,13 +138,18 @@ class ConsentMetadataTest {
 
     // helper for standard serialize/deserialize
     private fun sdm() : ConsentMetadata {
-        return objectMapper.readValue<ConsentMetadata>(objectMapper.writeValueAsString(createMetadata()), ConsentMetadata::class.java)
+        return sdm(OffsetDateTime.now())
+    }
+
+    private fun sdm(now : OffsetDateTime) : ConsentMetadata {
+        val s = objectMapper.writeValueAsString(createMetadata(now))
+        return objectMapper.readValue<ConsentMetadata>(s, ConsentMetadata::class.java)
     }
 
 
-    private fun createMetadata() : ConsentMetadata {
+    private fun createMetadata(now : OffsetDateTime) : ConsentMetadata {
         // period
-        val period = Period(LocalDate.now(), LocalDate.now().plusDays(1))
+        val period = Period(now, now.plusDays(1))
 
         // symmetric key
         val secureKey = SymmetricKey("AES_GCM_256", "567898==")

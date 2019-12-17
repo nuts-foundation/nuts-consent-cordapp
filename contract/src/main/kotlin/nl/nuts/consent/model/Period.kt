@@ -19,16 +19,21 @@
 
 package nl.nuts.consent.model
 
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonProperty
 import net.corda.core.contracts.requireThat
 import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
 import javax.validation.constraints.NotNull
 
 data class Period (
     @get:NotNull
-    @JsonProperty("validFrom") val validFrom: LocalDate,
+    @JsonProperty("validFrom")
+    val validFrom: OffsetDateTime,
 
-    @JsonProperty("validTo") val validTo: LocalDate? = null
+    @JsonProperty("validTo")
+    val validTo: OffsetDateTime? = null
 ) {
     fun verify() {
         requireThat {
