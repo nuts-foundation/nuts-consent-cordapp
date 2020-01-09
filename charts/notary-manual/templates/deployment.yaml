@@ -22,7 +22,7 @@ spec:
       initContainers:
         - name: "set-working-dir"
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          command: ['sh', '-c', 'rm -rf /opt/nuts-working-dir/cordapps && cp -r /opt/nuts/ /opt/nuts-working-dir/']
+          command: ['sh', '-c', 'rm -rf /opt/nuts-working-dir/nuts/cordapps && cp -r /opt/nuts/ /opt/nuts-working-dir/']
           volumeMounts:
             - name: config-volume1
               mountPath: /opt/nuts/node.conf
