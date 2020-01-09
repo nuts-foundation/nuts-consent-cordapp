@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: nutsfoundation/nuts-consent-cordapp
-  tag: release-0.11.1-dev
+  tag: release-0.11.2-dev
   pullPolicy: IfNotPresent
 
 service:
