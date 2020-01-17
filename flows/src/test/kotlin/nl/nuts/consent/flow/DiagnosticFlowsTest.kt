@@ -19,8 +19,19 @@
 
 package nl.nuts.consent.flow
 
+import com.nhaarman.mockito_kotlin.anyOrNull
+import com.nhaarman.mockito_kotlin.mock
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowSession
+import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.expect
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.cordappWithPackages
@@ -28,6 +39,11 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mock
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.any
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class DiagnosticFlowsTest {
@@ -43,11 +59,6 @@ class DiagnosticFlowsTest {
         listOf(a, b).forEach {
             it.registerInitiatedFlow(DiagnosticFlows.PongFlow::class.java)
         }
-    }
-
-    @Before
-    open fun setup() {
-        network.runNetwork()
     }
 
     @After
@@ -67,5 +78,17 @@ class DiagnosticFlowsTest {
         val future = a.services.startFlow(flow)
         network.runNetwork()
         assertTrue(future.resultFuture.isDone)
+    }
+
+    @Test
+    fun `FlowException is raised on incorrect data`() {
+        val mockSession = mock<FlowSession>()
+        val mockData = mock<UntrustworthyData<String>>()
+        `when`(mockSession.receive<String>()).thenReturn(mockData)
+        `when`(mockData.unwrap<String>(anyOrNull())).thenReturn("not pong")
+
+        assertFailsWith(FlowException::class) {
+            DiagnosticFlows.checkReceivedData(mockSession, "pong")
+        }
     }
 }
