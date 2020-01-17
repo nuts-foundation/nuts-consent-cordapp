@@ -24,13 +24,17 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.unwrap
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Collection of flows for checking network health
  */
 object DiagnosticFlows {
 
+    @Suspendable
     fun checkReceivedData(counterPartySession: FlowSession, dataToReceive: String) {
         val packet1= counterPartySession.receive<String>()
         val received: String = packet1.unwrap {
@@ -42,7 +46,10 @@ object DiagnosticFlows {
         }
     }
 
+    @InitiatingFlow
+    @StartableByRPC
     abstract class PingFlow : FlowLogic<Unit>() {
+        val localLogger: Logger = LoggerFactory.getLogger(this::class.java)
 
         /**
          * Define steps
@@ -68,6 +75,7 @@ object DiagnosticFlows {
             progressTracker.currentStep = FINDING_PEER
 
             val p = findTarget()
+            localLogger.debug("Sending ping to ${p.name}")
 
             progressTracker.currentStep = SEND_DATA
 
@@ -83,9 +91,9 @@ object DiagnosticFlows {
     /**
      * A ping flow targeted at the first Notary
      */
-    @InitiatingFlow
     @StartableByRPC
     class PingNotaryFlow : PingFlow() {
+        @Suspendable
         override fun findTarget(): Party {
             try {
                 return serviceHub.networkMapCache.notaryIdentities.first()
@@ -98,9 +106,9 @@ object DiagnosticFlows {
     /**
      * A ping flow targeted at a random node
      */
-    @InitiatingFlow
     @StartableByRPC
     class PingRandomFlow : PingFlow() {
+        @Suspendable
         override fun findTarget(): Party {
             return serviceHub.networkMapCache.allNodes
                     .map { it.legalIdentities }
@@ -113,6 +121,8 @@ object DiagnosticFlows {
 
     @InitiatedBy(PingFlow::class)
     class PongFlow(val counterPartySession: FlowSession) : FlowLogic<Unit>() {
+        val localLogger: Logger = LoggerFactory.getLogger(this::class.java)
+
         companion object {
             object RECEIVING_DATA : ProgressTracker.Step("Waiting for ping.")
             object SEND_DATA : ProgressTracker.Step("Sending pong.")
@@ -130,6 +140,7 @@ object DiagnosticFlows {
             progressTracker.currentStep = RECEIVING_DATA
 
             checkReceivedData(counterPartySession, "ping")
+            localLogger.debug("Received ping from ${counterPartySession.counterparty.name}")
 
             progressTracker.currentStep = SEND_DATA
 
