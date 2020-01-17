@@ -110,11 +110,14 @@ object DiagnosticFlows {
     class PingRandomFlow : PingFlow() {
         @Suspendable
         override fun findTarget(): Party {
+            val me = serviceHub.myInfo.legalIdentities
+
             return serviceHub.networkMapCache.allNodes
                     .map { it.legalIdentities }
                     .toList()
                     .flatten()
-                    .filter { serviceHub.networkMapCache.getNotary(it.name) == null }
+                    .filter { serviceHub.networkMapCache.getNotary(it.name) == null } // no notaries
+                    .filterNot { me.contains(it) } // not myself
                     .randomOrNull() ?: throw FlowException("No nodes available")
         }
     }
