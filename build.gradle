@@ -77,7 +77,6 @@ allprojects {
             exclude group: 'com.github.corda.crash', module: 'crash.shell'
             exclude group: 'com.github.corda.crash', module: 'crash.connectors.ssh'
             exclude group: 'com.github.bft-smart', module: 'library'
-            exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
         }
     }
 

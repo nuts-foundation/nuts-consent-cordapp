@@ -7,8 +7,11 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Root level="info">
+        <Root level="warn">
             <AppenderRef ref="Console"/>
         </Root>
+        <Logger name="nl.nuts.consent.flow" level="debug" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
     </Loggers>
 </Configuration>
