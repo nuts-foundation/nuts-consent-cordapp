@@ -79,6 +79,11 @@ object ConsentFlows {
         // new hashes
         val newHashes = containedConsentRecordHash(attachments, serviceHub)
         // find transaction for stateRef
+        raiseOnDuplicateConsentRecordsRec(stateRef, newHashes, attachments, serviceHub, side)
+    }
+
+    private fun raiseOnDuplicateConsentRecordsRec(stateRef: StateRef, consentRecordHashes: Set<String>, attachments: Set<SecureHash>, serviceHub: ServiceHub, side:String = "origin") {
+        // find transaction for stateRef
         val transaction = serviceHub.validatedTransactions.getTransaction(stateRef.txhash)!!
         // return clause, only contract attachment
         if(transaction.tx.attachments.size <= 1) {
@@ -92,13 +97,13 @@ object ConsentFlows {
         }
 
         // error when overlap
-        if (prevHashes.intersect(newHashes).isNotEmpty()) {
+        if (prevHashes.intersect(consentRecordHashes).isNotEmpty()) {
             throw FlowException("ConsentBranch contains 1 or more records already present in ConsentState, detected at $side")
         }
 
         // NOTE: this will go down the entire chain which may be very long???
         // recursive
-        transaction.inputs.forEach{ raiseOnDuplicateConsentRecords(it, attachments, serviceHub, side) }
+        transaction.inputs.forEach{ raiseOnDuplicateConsentRecordsRec(it, consentRecordHashes, attachments, serviceHub, side) }
     }
 
     /**
