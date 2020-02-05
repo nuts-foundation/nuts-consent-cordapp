@@ -21,7 +21,9 @@ package nl.nuts.consent.flow
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
@@ -55,24 +57,53 @@ object ConsentFlows {
         return state.referencedAttachments(state.attachments.map { it to serviceHub.attachments.openAttachment(it)!! }.toMap())
     }
 
-    private fun containedConsentRecordHash(state : ConsentBase, serviceHub: ServiceHub) : Set<String> {
-        return state.attachments.map {
+    private fun containedConsentRecordHash(attachments: Set<SecureHash>, serviceHub: ServiceHub) : Set<String> {
+        val hashes = mutableSetOf<String>()
+
+        attachments.forEach {
             val att = serviceHub.attachments.openAttachment(it)!!
-            val metadata = extractMetadata(att)
-            metadata.consentRecordHash
-        }.toSet()
+            if (att !is ContractAttachment) {
+                val metadata = extractMetadata(att)
+                hashes.add(metadata.consentRecordHash)
+            }
+        }
+
+        return hashes
     }
 
     /**
      * A check for duplicate attachments, this is done outside the contract because the contents of the attachments is required
+     * It recursively checks previous transactions as well
      */
-    fun raiseOnDuplicateConsentRecords(consentState: ConsentState, consentBranch: ConsentBranch, serviceHub: ServiceHub, side:String = "origin") {
-        val consentRecordHashInState = containedConsentRecordHash(consentState, serviceHub)
-        val consentRecordHashInBranch = containedConsentRecordHash(consentBranch, serviceHub)
+    fun raiseOnDuplicateConsentRecords(stateRef: StateRef, attachments: Set<SecureHash>, serviceHub: ServiceHub, side:String = "origin") {
+        // new hashes
+        val newHashes = containedConsentRecordHash(attachments, serviceHub)
+        // find transaction for stateRef
+        raiseOnDuplicateConsentRecordsRec(stateRef, newHashes, attachments, serviceHub, side)
+    }
 
-        if (consentRecordHashInBranch.intersect(consentRecordHashInState).isNotEmpty()) {
+    private fun raiseOnDuplicateConsentRecordsRec(stateRef: StateRef, consentRecordHashes: Set<String>, attachments: Set<SecureHash>, serviceHub: ServiceHub, side:String = "origin") {
+        // find transaction for stateRef
+        val transaction = serviceHub.validatedTransactions.getTransaction(stateRef.txhash)!!
+        // return clause, only contract attachment
+        if(transaction.tx.attachments.size <= 1) {
+            return
+        }
+        // previous hashes, ignore overlapping attachments, we want to prevent the same consentRecordHash in other attachments
+        val prevHashes = containedConsentRecordHash(transaction.tx.attachments.toSet() - attachments, serviceHub)
+        // return clause
+        if (prevHashes.isEmpty()) {
+            return
+        }
+
+        // error when overlap
+        if (prevHashes.intersect(consentRecordHashes).isNotEmpty()) {
             throw FlowException("ConsentBranch contains 1 or more records already present in ConsentState, detected at $side")
         }
+
+        // NOTE: this will go down the entire chain which may be very long???
+        // recursive
+        transaction.inputs.forEach{ raiseOnDuplicateConsentRecordsRec(it, consentRecordHashes, attachments, serviceHub, side) }
     }
 
     /**
@@ -223,7 +254,8 @@ object ConsentFlows {
             // Verify that the transaction is valid according to contract.
             txBuilder.verify(serviceHub)
             // Compare consentRecordHash of new and existing records
-            raiseOnDuplicateConsentRecords(consentStateRef.state.data, newState, serviceHub)
+            // also check if consentRecordHashes of new attachments exist in output state of previous transactions (except those to keep)
+            raiseOnDuplicateConsentRecords(consentStateRef.ref, attachments, serviceHub)
 
             progressTracker.currentStep = SIGNING_TRANSACTION
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
@@ -278,7 +310,7 @@ object ConsentFlows {
                     val consentBranch = stx.coreTransaction.outRefsOfType<ConsentBranch>()[0].state.data
 
                     // check for duplicates at other nodes as well
-                    raiseOnDuplicateConsentRecords(untrustworthyData[0].state.data, consentBranch, serviceHub, "counter party")
+                    raiseOnDuplicateConsentRecords(untrustworthyData[0].ref, consentBranch.attachments, serviceHub, "counter party")
                 }
             }
             val txId = subFlow(signTransactionFlow).id

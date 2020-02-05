@@ -92,6 +92,28 @@ class MaliciousSendingFlowTest : GenericFlowTests() {
         }
     }
 
+    @Test
+    fun `Branching with already added consentRecord after update raises`() {
+        val genesisTx = runGenesisTransaction("maliciousConsentTest-3")
+        val genesisState = genesisTx.tx.outputStates.first() as ConsentState
+        var branchTx = runAddTransaction(genesisState.linearId)
+        var branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
+        runSignTransaction(branchState.linearId, validHashAdd1!!)
+        runMergeTransaction(branchState.linearId)
+        branchTx = runUpdateTransaction(genesisState.linearId)
+        branchState = branchTx.tx.outputsOfType<ConsentBranch>().first()
+        runSignTransaction(branchState.linearId, validHashUpd!!)
+        runMergeTransaction(branchState.linearId)
+
+        // branch again should raise
+        try {
+            runAddTransaction(genesisState.linearId, setOf(validHashDup!!))
+            fail("Expected flow exception")
+        } catch (e:FlowException) {
+            assertEquals("ConsentBranch contains 1 or more records already present in ConsentState, detected at origin", e.message)
+        }
+    }
+
     private fun runGenesisTransaction(externalId: String): SignedTransaction {
         val flow = ConsentFlows.CreateGenesisConsentState(externalId)
         val future = a.services.startFlow(flow)
@@ -100,6 +122,13 @@ class MaliciousSendingFlowTest : GenericFlowTests() {
     }
 
     private fun runAddTransaction(uuid: UniqueIdentifier, hash:Set<SecureHash> = setOf(validHashAdd1!!)): SignedTransaction {
+        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, hash, setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val future = a.services.startFlow(flow)
+        network.runNetwork()
+        return future.resultFuture.getOrThrow()
+    }
+
+    private fun runUpdateTransaction(uuid: UniqueIdentifier, hash:Set<SecureHash> = setOf(validHashUpd!!)): SignedTransaction {
         val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, hash, setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
         val future = a.services.startFlow(flow)
         network.runNetwork()
