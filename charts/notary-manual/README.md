@@ -14,3 +14,11 @@ todo nodeInfo and additionalNodeInfos
 ```
 helm install (--debug) (--dry-run) --name notary --namespace manual .
 ```
+
+### Upgrade
+
+```
+helm upgrade (--debug) (--dry-run) notary .
+```
+
+The kubernetes node might be too small to host 2 containers, in that case scale down and up...
