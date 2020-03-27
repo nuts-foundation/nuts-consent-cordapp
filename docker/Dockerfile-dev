@@ -14,6 +14,5 @@ WORKDIR /opt/nuts
 HEALTHCHECK --start-period=90s --timeout=5s --interval=10s \
     CMD netstat -an | grep 7886 > /dev/null; if [ 0 != $? ]; then exit 1; fi;
 
-ENTRYPOINT ["/usr/local/openjdk-8/bin/java"]
-CMD ["-jar", "/opt/nuts/corda.jar", "--network-root-truststore-password=changeit", "--log-to-console"]
+CMD ["java", "-jar", "/opt/nuts/corda.jar", "--network-root-truststore-password=changeit", "--log-to-console"]
 EXPOSE 7886 7887 7888 2222
