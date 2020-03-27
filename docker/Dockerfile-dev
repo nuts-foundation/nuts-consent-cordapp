@@ -1,9 +1,9 @@
-FROM openjdk:8-jdk-slim as builder
+FROM adoptopenjdk/openjdk8:alpine as builder
 LABEL maintainer="wout.slakhorst@nuts.nl"
 COPY / .
 RUN ./gradlew jar
 
-FROM openjdk:8-jre-slim
+FROM adoptopenjdk/openjdk8:alpine
 RUN mkdir /opt/nuts
 COPY lib/corda.jar /opt/nuts/corda.jar
 COPY docker/files/certificates/network-root-truststore.jks /opt/nuts/certificates/network-root-truststore.jks
