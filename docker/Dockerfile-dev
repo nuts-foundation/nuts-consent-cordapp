@@ -5,10 +5,10 @@ RUN ./gradlew jar
 
 FROM adoptopenjdk/openjdk8:alpine
 RUN mkdir /opt/nuts
-COPY lib/corda.jar /opt/nuts/corda.jar
+COPY lib/corda-4.4.jar /opt/nuts/corda.jar
 COPY docker/files/certificates/network-root-truststore.jks /opt/nuts/certificates/network-root-truststore.jks
-COPY --from=builder contract/build/libs/contract-0.12.0.jar /opt/nuts/cordapps/contract-0.12.0.jar
-COPY --from=builder flows/build/libs/flows-0.12.0.jar /opt/nuts/cordapps/flows-0.12.0.jar
+COPY --from=builder contract/build/libs/contract-0.13.0.jar /opt/nuts/cordapps/contract-0.13.0.jar
+COPY --from=builder flows/build/libs/flows-0.13.0.jar /opt/nuts/cordapps/flows-0.13.0.jar
 WORKDIR /opt/nuts
 
 HEALTHCHECK --start-period=90s --timeout=5s --interval=10s \
