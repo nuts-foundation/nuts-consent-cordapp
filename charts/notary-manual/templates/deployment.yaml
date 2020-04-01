@@ -55,7 +55,8 @@ spec:
               protocol: TCP
           volumeMounts:
             - name: working-dir-volume
-              mountPath: /opt
+              mountPath: /opt/nuts
+              subPath: nuts
           resources:
 {{ toYaml .Values.resources | indent 12 }}
       volumes:
