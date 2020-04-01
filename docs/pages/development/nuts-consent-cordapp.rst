@@ -82,6 +82,6 @@ You can release libraries through:
 
 Then go to https://oss.sonatype.org and *close* and *release* the libs. More info can be found on https://central.sonatype.org/pages/releasing-the-deployment.html.
 
-.. notes::
+.. note::
 
     It seems signing require Oracles JVM! So openjdk won't work.
