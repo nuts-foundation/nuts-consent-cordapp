@@ -9,7 +9,7 @@ The basic node.conf inside the Cordap base directory should look similar like th
 
 .. code-block:: yaml
 
-    myLegalName="O=Nuts,C=NL,L=Groenlo,CN=nuts_corda_development_dahmer"
+    myLegalName="O=Nuts,C=NL,L=Groenlo,CN=nuts_corda_development"
     emailAddress="info@nuts.nl"
     devMode=false
     devModeOptions {
@@ -25,10 +25,21 @@ The basic node.conf inside the Cordap base directory should look similar like th
         adminAddress="localhost:11043"
     }
     rpcUsers=[]
+    custom = {
+        jvmArgs: [ "-Xmx1G", "-XX:+UseG1GC" ]
+    }
 
 Both the ``doormanURL`` and ``networkMapURL`` must point to the location where *Nuts Discovery* is running. The ``p2pAddress`` is the endpoint that must be exposed to the outside world and which is added to the *Nuts registry*. The ``rpcSettings`` property is used for exposing the rpc endoint used by *Nuts consent bridge*.
 
 The ``myLegalName`` is the identity of the node and must be unique. It follows the x500 name convention. This is also the identiy that is added to the *Nuts registry* consent endpoint.
+
+Since Corda 4.4 memory consumption has changed, the default 512m is no longer enough. The `custom` section is therefore mandatory:
+
+.. code-block:: yaml
+
+    custom = {
+        jvmArgs: [ "-Xmx1G", "-XX:+UseG1GC" ]
+    }
 
 Signed libraries
 ****************
