@@ -41,6 +41,40 @@ Since Corda 4.4 memory consumption has changed, the default 512m is no longer en
         jvmArgs: [ "-Xmx1G", "-XX:+UseG1GC" ]
     }
 
+Database & Docker
+*****************
+
+By default Corda places the DB in the `baseDirectory` which, by default, is inside a docker container. This can be avoided by mounting the entire `baseDirectory` but this also means the cordapps and `corda.jar` have to be mounted as well. The Nuts cordapp image has these inside the image. Having to download them again is extra work, that's just annoying. Luckily it's also possible to put the DB in a different location. The default DB configuration is below:
+
+.. code-block:: yaml
+
+    dataSourceProperties = {
+        dataSourceClassName = org.h2.jdbcx.JdbcDataSource
+        dataSource.url = "jdbc:h2:file:"${baseDirectory}"/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
+        dataSource.user = sa
+        dataSource.password = ""
+    }
+
+By putting the DB in a sub directory it'll be easier to mount. For example changing above config to:
+
+.. code-block:: yaml
+
+    dataSourceProperties = {
+        dataSourceClassName = org.h2.jdbcx.JdbcDataSource
+        dataSource.url = "jdbc:h2:file:"${baseDirectory}"/data/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
+        dataSource.user = sa
+        dataSource.password = ""
+    }
+
+places the DB in a `/data` subdirectory. Which can then be mounted with:
+
+.. code-block:: shell
+
+    docker run \
+        -v {{data_dir}}:/opt/nuts/data \
+        -d \
+        nuts-consent-cordapp:latest-dev
+
 Signed libraries
 ****************
 
