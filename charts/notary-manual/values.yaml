@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: nutsfoundation/nuts-consent-cordapp
-  tag: release-0.13.0-dev
+  tag: release-0.13.1-dev
   pullPolicy: IfNotPresent
 
 service:
@@ -34,9 +34,9 @@ resources:
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
   limits:
-    memory: "1Gi"
+    memory: "1.5Gi"
   requests:
-    memory: "512Mi"
+    memory: "1024Mi"
 
 nodeSelector: {}
 
