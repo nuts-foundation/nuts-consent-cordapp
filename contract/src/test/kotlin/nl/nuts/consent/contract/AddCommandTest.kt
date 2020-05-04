@@ -20,6 +20,7 @@
 package nl.nuts.consent.contract
 
 import net.corda.testing.node.ledger
+import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
@@ -334,6 +335,35 @@ class AddCommandTest : ConsentContractTest() {
                         ConsentContract.ConsentCommands.AddCommand()
                 )
                 verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `AddCommand has open branch as output`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = newAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentState(consentStateUuid, 1, emptySet(), setOf(homeCare.party, generalCare.party))
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentState(consentStateUuid, 2, emptySet(), setOf(homeCare.party, generalCare.party))
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party), BranchState.Closed)
+                )
+                attachment(attHash)
+                command(
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.AddCommand()
+                )
+                `fails with`("Output branch does have an open state")
             }
         }
     }

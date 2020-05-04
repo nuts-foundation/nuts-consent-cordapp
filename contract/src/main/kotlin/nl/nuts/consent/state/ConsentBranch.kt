@@ -19,9 +19,7 @@
 
 package nl.nuts.consent.state
 
-import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.BelongsToContract
-import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -38,6 +36,9 @@ import nl.nuts.consent.contract.AttachmentSignature
  * @param signatures list of Party signatures representing parties that have completed checks against the encrypted attachment
  * @param legalEntities list of legal entities mentioned in the consent resource and must be involved in signing
  * @param parties involved parties
+ * @param state current state of the branch, used for providing feedback before consuming in case of an error
+ * @param closingReason reason for non-success state
+ * @param closingComment user comment on non-success state
  */
 @BelongsToContract(ConsentContract::class)
 class ConsentBranch : ConsentBase {
@@ -45,16 +46,22 @@ class ConsentBranch : ConsentBase {
     val branchPoint : UniqueIdentifier
     val legalEntities: Set<String>
     val signatures: List<AttachmentSignature>
+    val state: BranchState
+    val closingReason: String?
+    val closingComment: String?
 
     constructor(uuid: UniqueIdentifier, branchPoint: UniqueIdentifier, attachments: Set<SecureHash>, legalEntities: Set<String>,
-                signatures: List<AttachmentSignature>, parties: Set<Party> = emptySet()) : super(uuid, attachments, parties) {
+                signatures: List<AttachmentSignature>, parties: Set<Party> = emptySet(), state: BranchState = BranchState.Open, closingReason: String? = null, closingComment: String? = null) : super(uuid, attachments, parties) {
         this.branchPoint = branchPoint
         this.legalEntities = legalEntities
         this.signatures = signatures
+        this.state = state
+        this.closingReason = closingReason
+        this.closingComment = closingComment
     }
 
     fun copy(uuid: UniqueIdentifier = this.uuid, branchPoint: UniqueIdentifier = this.branchPoint, attachments: Set<SecureHash> = this.attachments,
-             legalEntities: Set<String> = this.legalEntities, signatures: List<AttachmentSignature> = this.signatures, parties: Set<Party> = this.parties) : ConsentBranch {
-        return ConsentBranch(uuid, branchPoint, attachments, legalEntities, signatures, parties)
+             legalEntities: Set<String> = this.legalEntities, signatures: List<AttachmentSignature> = this.signatures, parties: Set<Party> = this.parties, state:BranchState = this.state, closingReason: String? = this.closingReason, closingComment: String? = this.closingComment) : ConsentBranch {
+        return ConsentBranch(uuid, branchPoint, attachments, legalEntities, signatures, parties, state, closingReason, closingComment)
     }
 }
