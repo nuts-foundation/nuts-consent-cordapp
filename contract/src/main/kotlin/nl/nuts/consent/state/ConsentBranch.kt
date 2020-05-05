@@ -37,7 +37,7 @@ import nl.nuts.consent.contract.AttachmentSignature
  * @param legalEntities list of legal entities mentioned in the consent resource and must be involved in signing
  * @param parties involved parties
  * @param state current state of the branch, used for providing feedback before consuming in case of an error
- * @param closingReason reason for non-success state
+ * @param closingReason reason for non-success state, computer generated, should include vendor and custodian information
  * @param closingComment user comment on non-success state
  */
 @BelongsToContract(ConsentContract::class)

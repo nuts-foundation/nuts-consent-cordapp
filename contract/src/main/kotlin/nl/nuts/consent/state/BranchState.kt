@@ -29,5 +29,4 @@ enum class BranchState {
     Open,
     Error,
     Closed,
-    ClosedByPeer,
 }
