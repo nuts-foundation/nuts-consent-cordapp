@@ -3,8 +3,8 @@ nuts-consent-cordapp
 
 Discovery Consent Cordapp by the Nuts foundation for distributing Consent records across nodes.
 
-.. image:: https://travis-ci.org/nuts-foundation/nuts-consent-cordapp.svg?branch=master
-    :target: https://travis-ci.org/nuts-foundation/nuts-consent-cordapp
+.. image:: https://circleci.com/gh/nuts-foundation/nuts-consent-cordapp.svg?style=svg
+    :target: https://circleci.com/gh/nuts-foundation/nuts-consent-cordapp
     :alt: Build Status
 
 .. image:: https://readthedocs.org/projects/nuts-consent-cordapp/badge/?version=latest
