@@ -30,7 +30,15 @@ This last step has to be done for each node that's added to the network until th
 ### To list contents
 
 ```
-kubectl exec [NOTARY-POD] -n manual ls /opt/nuts/
+kubectl exec [NOTARY-POD] -n manual -it -- ls /opt/nuts/
+```
+
+### Update config partially
+
+For example when new network-params are available
+
+```
+kubectl create configmap notary-config --from-file=files/node.conf --from-file=files/network-parameters --namespace manual -o yaml --dry-run | kubectl replace -f -
 ```
 
 ## Upgrade
