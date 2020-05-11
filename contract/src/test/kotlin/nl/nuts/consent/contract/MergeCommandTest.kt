@@ -21,6 +21,7 @@ package nl.nuts.consent.contract
 
 import net.corda.core.crypto.SecureHash
 import net.corda.testing.node.ledger
+import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
@@ -52,6 +53,36 @@ class MergeCommandTest : ConsentContractTest() {
                         ConsentContract.ConsentCommands.MergeCommand()
                 )
                 verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `MergeCommand requires Open branchState dot state`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = newAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentState(consentStateUuid, 1, emptySet(), setOf(homeCare.party, generalCare.party))
+                )
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("a", "b"),
+                        listOf(createValidPAS(homeCare, attHash), createValidPAS(generalCare, attHash)), setOf(homeCare.party, generalCare.party), BranchState.Closed)
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentState(consentStateUuid, 2, setOf(attHash), setOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.MergeCommand()
+                )
+                `fails with`("Input state does have an open state")
             }
         }
     }

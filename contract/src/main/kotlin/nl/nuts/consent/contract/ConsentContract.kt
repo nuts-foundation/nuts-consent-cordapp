@@ -27,6 +27,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.transactions.LedgerTransaction
 import nl.nuts.consent.model.ConsentMetadata
+import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import java.nio.charset.Charset
@@ -160,6 +161,7 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "Output state has the same UUID as input state" using (consentOut.linearId == consentIn.linearId)
+                    "Output branch does have an open state" using (branchOut.state == BranchState.Open)
                     "Version number is 1 more" using (consentOut.version - consentIn.version == 1)
 
                     "ConsentBranch has the same externalId as ConsentState" using (consentOut.linearId.externalId == branchOut.linearId.externalId)
@@ -273,6 +275,7 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "Output state has the same UUID as input state" using (branchIn.linearId == branchOut.linearId)
+                    "Input state does have an open state" using (branchIn.state == BranchState.Open)
 
                     "All new participants are unique" using (branchOut.participants.toSet().size == branchOut.participants.size)
                     "All new participants must be signers" using (command.signers.containsAll(branchOut.participants.map { it.owningKey }))
@@ -314,6 +317,50 @@ class ConsentContract : Contract {
         }
 
         /**
+         * Command for adding a signature to a ConsentBranch
+         */
+        class CloseCommand : ConsentCommands {
+            override fun requiredNumberOfAttachments(tx: LedgerTransaction) : Int {
+                val branchIn = tx.inputsOfType<ConsentBranch>().single()
+                return branchIn.attachments.size
+            }
+
+            override fun requireSingleCommand() = true
+
+            override fun verifyStates(tx: LedgerTransaction) {
+                val command = tx.commands.single { it.value == this }
+                val attachments = tx.attachments.filter { it !is ContractAttachment }
+
+                requireThat {
+                    "1 ConsentBranch is consumed" using (tx.inputsOfType<ConsentBranch>().size == 1)
+                    "1 ConsentBranch is produced" using (tx.outputsOfType<ConsentBranch>().size == 1)
+                }
+
+                val branchIn = tx.inputsOfType<ConsentBranch>().single()
+                val branchOut = tx.outputsOfType<ConsentBranch>().single()
+
+                requireThat {
+                    "Output state has the same UUID as input state" using (branchIn.linearId == branchOut.linearId)
+                    "Output state does not have an open state" using (branchOut.state != BranchState.Open)
+
+                    "All new participants are unique" using (branchOut.participants.toSet().size == branchOut.participants.size)
+                    "All new participants must be signers" using (command.signers.containsAll(branchOut.participants.map { it.owningKey }))
+
+                    "Participants remains the same" using (branchOut.participants.containsAll(branchIn.participants))
+                    "Participants remains the same" using (branchIn.participants.containsAll(branchOut.participants))
+
+                    "LegalEntities remain the same" using (branchOut.legalEntities.containsAll(branchIn.legalEntities))
+                    "LegalEntities remain the same" using (branchIn.legalEntities.containsAll(branchOut.legalEntities))
+
+                    "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
+                    "All attachments in state are include in the transaction" using (branchOut.attachments.subtract(attachments.map { it.id }.toSet()).isEmpty())
+                    "Attachments have not changed" using (branchIn.attachments.containsAll(branchOut.attachments))
+                    "Attachments have not changed" using (branchOut.attachments.containsAll(branchIn.attachments))
+                }
+            }
+        }
+
+        /**
          * Command for merging a ConsentBranch and ConsentState into ConsentState
          */
         class MergeCommand : ConsentCommands {
@@ -349,6 +396,7 @@ class ConsentContract : Contract {
 
                 requireThat {
                     "Output state has the same UUID as input state" using (consentIn.linearId == consentOut.linearId)
+                    "Input state does have an open state" using (branchIn.state == BranchState.Open)
                     "Version number is 1 more" using (consentOut.version - consentIn.version == 1)
 
                     "All participants are unique" using (consentOut.participants.toSet().size == consentOut.participants.size)
