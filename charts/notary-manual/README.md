@@ -1,24 +1,50 @@
-### Create config
+## Create config
 
 ```
-kubectl create configmap notary-config --from-file=files/node.conf --from-file=files/nodeInfo-74A33A2848FC5E331B61005443ED44CB4A047F49167A3D9850BA81296A4EDAFF --from-file=files/network-parameters --namespace manual
+kubectl create configmap notary-config --from-file=files/node.conf --from-file=files/network-parameters --namespace manual
 kubectl create secret generic notary-keys --from-file=files/certificates/nodekeystore.jks --from-file=files/certificates/sslkeystore.jks --from-file=files/certificates/truststore.jks --namespace manual
-kubectl create configmap network-nodes --from-file=files/additional-node-infos/nodeInfo-74A33A2848FC5E331B61005443ED44CB4A047F49167A3D9850BA81296A4EDAFF  --from-file=files/additional-node-infos/nodeInfo-B89F7CCEB97BDF926D801C01138FF9B94E6CDC46B8B7FCA1770892C79FBAF8B9  --from-file=files/additional-node-infos/nodeInfo-91C262387328498D3664074E44E2B2AADA596D3FB2385509B02FBD0F29C413C1 --namespace manual
 kubectl apply -f volume.yaml -n manual
 ```
 
-todo nodeInfo and additionalNodeInfos
-
-### Install
+## Install
 
 ```
-helm install (--debug) (--dry-run) --name notary --namespace manual .
+helm install (--debug) (--dry-run) --name notary --namespace manual . -f STAGE.yaml
 ```
 
-### Upgrade
+### Upload files to container
+
+The required files are added through the config maps, since the container will die without it.
+
+After installation and when the container is running, files can be installed.
+The uploaded files will be placed in the PVC and will survive restarts.
+
+Copy additional node info's
 
 ```
-helm upgrade (--debug) (--dry-run) notary .
+kubectl cp path/to/nodeInfo/* [NOTARY-POD]:/opt/nuts/additional-node-infos/
+```
+
+This last step has to be done for each node that's added to the network until the discovery service is live.
+
+### To list contents
+
+```
+kubectl exec [NOTARY-POD] -n manual -it -- ls /opt/nuts/
+```
+
+### Update config partially
+
+For example when new network-params are available
+
+```
+kubectl create configmap notary-config --from-file=files/node.conf --from-file=files/network-parameters --namespace manual -o yaml --dry-run | kubectl replace -f -
+```
+
+## Upgrade
+
+```
+helm upgrade (--debug) (--dry-run) notary . -f STAGE.yaml
 ```
 
 The kubernetes node might be too small to host 2 containers, in that case scale down and up...
