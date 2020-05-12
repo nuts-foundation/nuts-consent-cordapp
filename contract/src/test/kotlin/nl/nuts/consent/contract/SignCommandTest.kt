@@ -54,6 +54,58 @@ class SignCommandTest : ConsentContractTest() {
     }
 
     @Test
+    fun `SignCommand requires same initiatingNode`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = newAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party), BranchState.Open, "node")
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
+                        listOf(createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
+                )
+                `fails with`("initiatingNode remains the same")
+            }
+        }
+    }
+
+    @Test
+    fun `SignCommand requires same initiatingLegalEntity`() {
+        ledgerServices.ledger {
+            val attachmentInputStream = newAttachment.inputStream()
+            val attHash = attachment(attachmentInputStream)
+
+            transaction {
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party), BranchState.Open, "", "entity")
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
+                        listOf(createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
+                )
+                attachment(attHash)
+                command(
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
+                )
+                `fails with`("initiatingLegalEntity remains the same")
+            }
+        }
+    }
+
+    @Test
     fun `SignCommand leaves list of legalEntities the same`() {
         ledgerServices.ledger {
             val attachmentInputStream = newAttachment.inputStream()

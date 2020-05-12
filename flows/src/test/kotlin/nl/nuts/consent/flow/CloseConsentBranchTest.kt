@@ -83,7 +83,6 @@ class CloseConsentBranchTest  : GenericFlowTests() {
     }
 
     private fun runCloseTransaction(uuid: UniqueIdentifier): SignedTransaction {
-        val attSig = AttachmentSignature("http://nuts.nl/naming/organisation#test", validHashAdd1!!, b.services.keyManagementService.sign(validHashAdd1!!.bytes, b.info.legalIdentities.first().owningKey))
         val flow = ConsentFlows.CloseConsentBranch(uuid, BranchState.Closed, "reason", "comment")
         val future = a.services.startFlow(flow)
         network.runNetwork()

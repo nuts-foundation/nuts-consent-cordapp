@@ -26,7 +26,8 @@ import kotlin.test.assertEquals
 class ConsentBranchTest {
     @Test
     fun `string representation of ConsentRequestState is its uuid`() {
-        val state = ConsentBranch(UniqueIdentifier(externalId = "id"), UniqueIdentifier(), emptySet(), emptySet(), emptyList(), emptySet())
+        val state = ConsentBranch(UniqueIdentifier(externalId = "id"), UniqueIdentifier(),
+            emptySet(), emptySet(), emptyList(), emptySet())
 
         assertEquals("${state.linearId.externalId}_${state.linearId.id}", state.toString())
     }
