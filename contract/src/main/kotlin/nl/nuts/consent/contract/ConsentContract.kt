@@ -289,6 +289,8 @@ class ConsentContract : Contract {
                     "initiatingNode remains the same" using (branchOut.initiatingNode == branchIn.initiatingNode)
                     "initiatingLegalEntity remains the same" using (branchOut.initiatingLegalEntity == branchIn.initiatingLegalEntity)
 
+                    "branchTime remains the same" using (branchOut.branchTime == branchIn.branchTime)
+
                     "Attachments in state have the same amount as include in the transaction" using (branchOut.attachments.size == attachments.size)
                     "All attachments in state are include in the transaction" using (branchOut.attachments.subtract(attachments.map { it.id }.toSet()).isEmpty())
                     "Attachments have not changed" using (branchIn.attachments.containsAll(branchOut.attachments))

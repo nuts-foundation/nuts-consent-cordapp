@@ -32,6 +32,7 @@ import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 
 class SignConsentBranchTest  : GenericFlowTests() {
     @Test
@@ -45,7 +46,7 @@ class SignConsentBranchTest  : GenericFlowTests() {
         // We check the recorded transaction in both vaults.
         for (node in listOf(a, b)) {
             val recordedTx = node.services.validatedTransactions.getTransaction(signedTx.id)
-            val txOutputs = recordedTx!!.tx.outputs
+            val txOutputs = recordedTx!!.tx.outputsOfType<ConsentBranch>()
             assertEquals(1, txOutputs.size)
 
             val txInputs = recordedTx.tx.inputs
@@ -53,6 +54,9 @@ class SignConsentBranchTest  : GenericFlowTests() {
 
             val attachments = recordedTx.tx.attachments
             assertEquals(2, attachments.size) // the first attachment is the contract and state jar
+
+            assertEquals(txOutputs.first().branchTime, branchState.branchTime)
+            assertNotEquals(txOutputs.first().stateTime, branchState.stateTime)
         }
     }
 

@@ -46,6 +46,7 @@ import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBase
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
+import java.time.OffsetDateTime
 import java.util.*
 import javax.persistence.PersistenceException
 
@@ -174,7 +175,8 @@ object ConsentFlows {
     @StartableByRPC
     open class CreateConsentBranch(val consentBranchUUID: UUID, val consentStateUuid:UniqueIdentifier,
                                    val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>,
-                                   val initiatingNode: String = "", val initiatingLegalEntity: String = "") : FlowLogic<SignedTransaction>() {
+                                   val initiatingNode: String = "", val initiatingLegalEntity: String = "",
+                                   val branchTime: OffsetDateTime = OffsetDateTime.now()) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -242,7 +244,8 @@ object ConsentFlows {
                 signatures = emptyList(),
                 parties = parties + serviceHub.myInfo.legalIdentities.first(),
                 initiatingNode = initiatingNode,
-                initiatingLegalEntity = initiatingLegalEntity
+                initiatingLegalEntity = initiatingLegalEntity,
+                branchTime = branchTime
             )
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(consentStateRef)
@@ -384,7 +387,7 @@ object ConsentFlows {
 
             val currentStateRef = pages.states.first()
             val currentState = currentStateRef.state.data
-            val newState = currentState.copy(signatures = currentState.signatures + approvedSigs)
+            val newState = currentState.copy(signatures = currentState.signatures + approvedSigs, stateTime = OffsetDateTime.now())
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
