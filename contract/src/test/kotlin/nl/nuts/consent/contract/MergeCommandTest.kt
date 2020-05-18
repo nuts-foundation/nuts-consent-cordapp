@@ -329,30 +329,4 @@ class MergeCommandTest : ConsentContractTest() {
             }
         }
     }
-
-    @Test
-    fun `SignCommand valid transaction`() {
-        ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
-
-            transaction {
-                input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
-                )
-                output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                listOf(createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
-                )
-                attachment(attHash)
-                command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
-                )
-                verifies()
-            }
-        }
-    }
 }

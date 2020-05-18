@@ -42,10 +42,12 @@ import net.corda.core.utilities.unwrap
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.contract.ConsentContract
 import nl.nuts.consent.contract.ConsentContract.Companion.extractMetadata
+import nl.nuts.consent.flow.model.NutsFunctionalContext
 import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBase
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
+import java.time.OffsetDateTime
 import java.util.*
 import javax.persistence.PersistenceException
 
@@ -172,7 +174,9 @@ object ConsentFlows {
      */
     @InitiatingFlow
     @StartableByRPC
-    open class CreateConsentBranch(val consentBranchUUID: UUID, val consentStateUuid:UniqueIdentifier, val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>) : FlowLogic<SignedTransaction>() {
+    open class CreateConsentBranch(val consentBranchUUID: UUID, val consentStateUuid:UniqueIdentifier,
+                                   val attachments: Set<SecureHash>, val peers: Set<CordaX500Name>,
+                                   val context: NutsFunctionalContext) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -232,7 +236,17 @@ object ConsentFlows {
 
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val newState = ConsentBranch(UniqueIdentifier(id = consentBranchUUID, externalId = consentStateUuid.externalId), consentStateUuid, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
+            val newState = ConsentBranch(
+                uuid = UniqueIdentifier(id = consentBranchUUID, externalId = consentStateUuid.externalId),
+                branchPoint = consentStateUuid,
+                attachments = attachments,
+                legalEntities = context.participatingLegalEntities,
+                signatures = emptyList(),
+                parties = parties + serviceHub.myInfo.legalIdentities.first(),
+                initiatingNode = context.initiatingNode,
+                initiatingLegalEntity = context.initiatingLegalEntity,
+                branchTime = context.branchTime
+            )
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(consentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)
@@ -373,7 +387,7 @@ object ConsentFlows {
 
             val currentStateRef = pages.states.first()
             val currentState = currentStateRef.state.data
-            val newState = currentState.copy(signatures = currentState.signatures + approvedSigs)
+            val newState = currentState.copy(signatures = currentState.signatures + approvedSigs, stateTime = OffsetDateTime.now())
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION

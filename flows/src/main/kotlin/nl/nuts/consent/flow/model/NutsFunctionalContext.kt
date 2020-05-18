@@ -1,6 +1,6 @@
 /*
  *     Nuts consent cordapp
- *     Copyright (C) 2019 Nuts community
+ *     Copyright (C) 2020 Nuts community
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -17,18 +17,16 @@
  *
  */
 
-package nl.nuts.consent.state
+package nl.nuts.consent.flow.model
 
-import net.corda.core.contracts.UniqueIdentifier
-import org.junit.Test
-import kotlin.test.assertEquals
+import net.corda.core.serialization.CordaSerializable
+import java.time.OffsetDateTime
 
-class ConsentBranchTest {
-    @Test
-    fun `string representation of ConsentRequestState is its uuid`() {
-        val state = ConsentBranch(UniqueIdentifier(externalId = "id"), UniqueIdentifier(),
-            emptySet(), emptySet(), emptyList(), emptySet())
-
-        assertEquals("${state.linearId.externalId}_${state.linearId.id}", state.toString())
-    }
-}
+/**
+ * Container for functional data to be passed to a flow. There's a maximum of args a flow can handle...
+ */
+@CordaSerializable
+data class NutsFunctionalContext(val participatingLegalEntities: Set<String>,
+                                 val initiatingNode: String = "",
+                                 val initiatingLegalEntity: String = "",
+                                 val branchTime: OffsetDateTime = OffsetDateTime.now())

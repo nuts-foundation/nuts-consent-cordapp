@@ -62,7 +62,7 @@ allprojects {
     apply plugin: 'jacoco'
     apply plugin: 'signing'
 
-    version = "0.13.0"
+    version = "0.14.0"
     group = "nl.nuts.consent.cordapp"
     cordapp {
         info.vendor = "Nuts community"

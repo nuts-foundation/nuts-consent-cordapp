@@ -20,28 +20,65 @@
 package nl.nuts.consent.contract
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
+import net.corda.core.internal.readFully
 import net.corda.testing.node.ledger
 import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
+import java.time.OffsetDateTime
 
 class SignCommandTest : ConsentContractTest() {
+
+    val attachmentInputStream = newAttachment.inputStream()
+    val attHash = attachmentInputStream.readFully().sha256()
+    val cb = ConsentBranch(
+        uuid = consentStateUuid,
+        branchPoint = consentStateUuid,
+        attachments = setOf(attHash),
+        legalEntities = setOf("http://nuts.nl/naming/organisation#test"),
+        signatures = emptyList(),
+        parties = setOf(homeCare.party, generalCare.party)
+    )
+
     @Test
-    fun `SignCommand requires Open txInput`() {
+    fun `SignCommand valid transaction`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
                     ConsentContract.CONTRACT_ID,
-                    ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party), BranchState.Closed)
+                    cb
                 )
                 output(
                     ConsentContract.CONTRACT_ID,
-                    ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                        listOf(createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
+                    cb.copy(signatures = listOf(createValidPAS(homeCare, attHash)))
+                )
+                attachment(attHash)
+                command(
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
+                )
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `SignCommand requires Open txInput`() {
+        ledgerServices.ledger {
+            attachment(newAttachment.inputStream())
+
+            transaction {
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(state = BranchState.Closed)
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(homeCare, attHash)))
                 )
                 attachment(attHash)
                 command(
@@ -54,25 +91,95 @@ class SignCommandTest : ConsentContractTest() {
     }
 
     @Test
-    fun `SignCommand leaves list of legalEntities the same`() {
+    fun `SignCommand requires same initiatingNode`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb
                 )
                 output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                listOf(createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(homeCare, attHash)), initiatingNode = "node")
                 )
                 attachment(attHash)
                 command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
+                )
+                `fails with`("initiatingNode remains the same")
+            }
+        }
+    }
+
+    @Test
+    fun `SignCommand requires same initiatingLegalEntity`() {
+        ledgerServices.ledger {
+            attachment(newAttachment.inputStream())
+
+            transaction {
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    cb
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(homeCare, attHash)), initiatingLegalEntity = "entity")
+                )
+                attachment(attHash)
+                command(
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
+                )
+                `fails with`("initiatingLegalEntity remains the same")
+            }
+        }
+    }
+
+    @Test
+    fun `SignCommand requires same branchTime`() {
+        ledgerServices.ledger {
+            attachment(newAttachment.inputStream())
+
+            transaction {
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    cb
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(homeCare, attHash)), branchTime = OffsetDateTime.MAX)
+                )
+                attachment(attHash)
+                command(
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
+                )
+                `fails with`("branchTime remains the same")
+            }
+        }
+    }
+
+    @Test
+    fun `SignCommand leaves list of legalEntities the same`() {
+        ledgerServices.ledger {
+            attachment(newAttachment.inputStream())
+
+            transaction {
+                input(
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(legalEntities = emptySet())
+                )
+                output(
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(homeCare, attHash)))
+                )
+                attachment(attHash)
+                command(
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
                 )
                 `fails with`("legalEntities remain the same")
             }
@@ -82,23 +189,21 @@ class SignCommandTest : ConsentContractTest() {
     @Test
     fun `SignCommand invalid legalEntityURI`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb
                 )
                 output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                listOf(createPASWrongIdentity(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createPASWrongIdentity(homeCare, attHash)))
                 )
                 attachment(attHash)
                 command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
                 )
                 `fails with`("unknown legalEntity found in attachmentSignatures, not present in attachments")
             }
@@ -108,23 +213,21 @@ class SignCommandTest : ConsentContractTest() {
     @Test
     fun `SignCommand transaction must have same set of attachments as output state`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb
                 )
                 output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, emptySet(), setOf("http://nuts.nl/naming/organisation#test"),
-                                listOf(createValidPAS(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(homeCare, attHash)), attachments = emptySet())
                 )
                 attachment(attHash)
                 command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
                 )
                 `fails with`("Attachments in state have the same amount as include in the transaction")
             }
@@ -134,22 +237,21 @@ class SignCommandTest : ConsentContractTest() {
     @Test
     fun `SignCommand only creates ConsentBranch states`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), emptySet(), emptyList(), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb
                 )
                 output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentState(consentStateUuid, 1, setOf(attHash), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    ConsentState(consentStateUuid, 1, setOf(attHash), setOf(homeCare.party, generalCare.party))
                 )
                 attachment(attHash)
                 command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
                 )
                 `fails with`("1 ConsentBranch is produced")
             }
@@ -157,24 +259,23 @@ class SignCommandTest : ConsentContractTest() {
     }
 
     @Test
-    fun `SignCommand requires more attachments on output than input`() {
+    fun `SignCommand requires more signatures on output than input`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb
                 )
                 output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"), emptyList(), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb
                 )
                 attachment(attHash)
                 command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
                 )
                 `fails with`("1 more signature is present")
             }
@@ -184,24 +285,21 @@ class SignCommandTest : ConsentContractTest() {
     @Test
     fun `SignCommand requires list of AttachmentSignatures that match attachments`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                emptyList(), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb
                 )
                 output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                listOf(createValidPAS(homeCare, SecureHash.allOnesHash)), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(homeCare, SecureHash.allOnesHash)))
                 )
                 attachment(attHash)
                 command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
                 )
                 `fails with`("All signatures belong to attachments")
             }
@@ -211,24 +309,21 @@ class SignCommandTest : ConsentContractTest() {
     @Test
     fun `SignCommand requires unique set of AttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                listOf(createValidPAS(generalCare, attHash)), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(generalCare, attHash)))
                 )
                 output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                listOf(createValidPAS(generalCare, attHash), createValidPAS(generalCare, attHash)), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createValidPAS(generalCare, attHash), createValidPAS(generalCare, attHash)))
                 )
                 attachment(attHash)
                 command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
                 )
                 `fails with`("All attachment signatures are unique")
             }
@@ -238,24 +333,21 @@ class SignCommandTest : ConsentContractTest() {
     @Test
     fun `SignCommand requires valid set of AttachmentSignatures`() {
         ledgerServices.ledger {
-            val attachmentInputStream = newAttachment.inputStream()
-            val attHash = attachment(attachmentInputStream)
+            attachment(newAttachment.inputStream())
 
             transaction {
                 input(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                emptyList(), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb
                 )
                 output(
-                        ConsentContract.CONTRACT_ID,
-                        ConsentBranch(consentStateUuid, consentStateUuid, setOf(attHash), setOf("http://nuts.nl/naming/organisation#test"),
-                                listOf(createPASWrongSignature(homeCare, attHash)), setOf(homeCare.party, generalCare.party))
+                    ConsentContract.CONTRACT_ID,
+                    cb.copy(signatures = listOf(createPASWrongSignature(homeCare, attHash)))
                 )
                 attachment(attHash)
                 command(
-                        listOf(homeCare.publicKey, generalCare.publicKey),
-                        ConsentContract.ConsentCommands.SignCommand()
+                    listOf(homeCare.publicKey, generalCare.publicKey),
+                    ConsentContract.ConsentCommands.SignCommand()
                 )
                 `fails with`("All signatures are valid")
             }
