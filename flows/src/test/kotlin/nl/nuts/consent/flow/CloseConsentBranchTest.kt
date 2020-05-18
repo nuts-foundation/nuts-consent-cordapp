@@ -26,10 +26,12 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.startFlow
 import nl.nuts.consent.contract.AttachmentSignature
+import nl.nuts.consent.flow.model.NutsFunctionalContext
 import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
+import java.time.OffsetDateTime
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -76,7 +78,7 @@ class CloseConsentBranchTest  : GenericFlowTests() {
     }
 
     private fun runAddTransaction(uuid: UniqueIdentifier): SignedTransaction {
-        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, setOf(validHashAdd1!!), setOf(b.info.singleIdentity().name), NutsFunctionalContext(setOf("http://nuts.nl/naming/organisation#test")))
         val future = a.services.startFlow(flow)
         network.runNetwork()
         return future.resultFuture.getOrThrow()

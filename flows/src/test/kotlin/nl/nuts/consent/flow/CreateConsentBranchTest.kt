@@ -26,8 +26,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.startFlow
+import nl.nuts.consent.flow.model.NutsFunctionalContext
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
+import java.time.OffsetDateTime
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -66,7 +68,8 @@ class CreateConsentBranchTest : GenericFlowTests() {
         val genesisState = genesisTx.tx.outputStates.first() as ConsentState
 
         assertFailsWith(FlowException::class) {
-            val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), genesisState.linearId, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(CordaX500Name.parse("C=NL,O=Nuts,L=Enschede")))
+            val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), genesisState.linearId, setOf(validHashAdd1!!), setOf(CordaX500Name.parse("C=NL,O=Nuts,L=Enschede")),
+                NutsFunctionalContext(setOf("http://nuts.nl/naming/organisation#test")))
             val future = a.services.startFlow(flow)
             network.runNetwork()
             future.resultFuture.getOrThrow()
@@ -81,7 +84,7 @@ class CreateConsentBranchTest : GenericFlowTests() {
     }
 
     private fun runCorrectTransaction(uuid: UniqueIdentifier) : SignedTransaction {
-        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, setOf(validHashAdd1!!), setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, setOf(validHashAdd1!!), setOf(b.info.singleIdentity().name), NutsFunctionalContext(setOf("http://nuts.nl/naming/organisation#test")))
         val future = a.services.startFlow(flow)
         network.runNetwork()
         return future.resultFuture.getOrThrow()

@@ -45,9 +45,11 @@ import nl.nuts.consent.flow.ConsentFlows.CreateConsentBranch.Companion.GENERATIN
 import nl.nuts.consent.flow.ConsentFlows.CreateConsentBranch.Companion.SENDING_DATA
 import nl.nuts.consent.flow.ConsentFlows.CreateConsentBranch.Companion.SIGNING_TRANSACTION
 import nl.nuts.consent.flow.ConsentFlows.CreateConsentBranch.Companion.VERIFYING_TRANSACTION
+import nl.nuts.consent.flow.model.NutsFunctionalContext
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Test
+import java.time.OffsetDateTime
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -122,14 +124,16 @@ class MaliciousSendingFlowTest : GenericFlowTests() {
     }
 
     private fun runAddTransaction(uuid: UniqueIdentifier, hash:Set<SecureHash> = setOf(validHashAdd1!!)): SignedTransaction {
-        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, hash, setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, hash, setOf(b.info.singleIdentity().name),
+            NutsFunctionalContext(setOf("http://nuts.nl/naming/organisation#test")))
         val future = a.services.startFlow(flow)
         network.runNetwork()
         return future.resultFuture.getOrThrow()
     }
 
     private fun runUpdateTransaction(uuid: UniqueIdentifier, hash:Set<SecureHash> = setOf(validHashUpd!!)): SignedTransaction {
-        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, hash, setOf("http://nuts.nl/naming/organisation#test"), setOf(b.info.singleIdentity().name))
+        val flow = ConsentFlows.CreateConsentBranch(UUID.randomUUID(), uuid, hash, setOf(b.info.singleIdentity().name),
+            NutsFunctionalContext(setOf("http://nuts.nl/naming/organisation#test")))
         val future = a.services.startFlow(flow)
         network.runNetwork()
         return future.resultFuture.getOrThrow()
@@ -163,7 +167,8 @@ class MaliciousSendingFlowTest : GenericFlowTests() {
      * Same as CreateConsentBranch but it doesn't check for duplicates
      */
     class MaliciousCreateConsentBranch(consentBranchUUID: UUID, consentStateUuid: UniqueIdentifier, attachments: Set<SecureHash>, legalEntities: Set<String>, peers: Set<CordaX500Name>) :
-            ConsentFlows.CreateConsentBranch(consentBranchUUID, consentStateUuid, attachments, legalEntities, peers) {
+            ConsentFlows.CreateConsentBranch(consentBranchUUID, consentStateUuid, attachments, peers,
+                NutsFunctionalContext(legalEntities)) {
         @Suspendable
         override fun call(): SignedTransaction {
             // Obtain a reference to the notary we want to use.
@@ -189,7 +194,7 @@ class MaliciousSendingFlowTest : GenericFlowTests() {
 
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val newState = ConsentBranch(UniqueIdentifier(id = consentBranchUUID, externalId = consentStateUuid.externalId), consentStateUuid, attachments, legalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
+            val newState = ConsentBranch(UniqueIdentifier(id = consentBranchUUID, externalId = consentStateUuid.externalId), consentStateUuid, attachments, context.participatingLegalEntities, emptyList(), parties + serviceHub.myInfo.legalIdentities.first())
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(consentStateRef)
                     .addOutputState(newState, ConsentContract.CONTRACT_ID)

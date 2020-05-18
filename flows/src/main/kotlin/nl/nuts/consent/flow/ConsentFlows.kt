@@ -42,6 +42,7 @@ import net.corda.core.utilities.unwrap
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.contract.ConsentContract
 import nl.nuts.consent.contract.ConsentContract.Companion.extractMetadata
+import nl.nuts.consent.flow.model.NutsFunctionalContext
 import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBase
 import nl.nuts.consent.state.ConsentBranch
@@ -174,9 +175,8 @@ object ConsentFlows {
     @InitiatingFlow
     @StartableByRPC
     open class CreateConsentBranch(val consentBranchUUID: UUID, val consentStateUuid:UniqueIdentifier,
-                                   val attachments: Set<SecureHash>, val legalEntities: Set<String>, val peers: Set<CordaX500Name>,
-                                   val initiatingNode: String = "", val initiatingLegalEntity: String = "",
-                                   val branchTime: OffsetDateTime = OffsetDateTime.now()) : FlowLogic<SignedTransaction>() {
+                                   val attachments: Set<SecureHash>, val peers: Set<CordaX500Name>,
+                                   val context: NutsFunctionalContext) : FlowLogic<SignedTransaction>() {
 
         /**
          * Define steps
@@ -240,12 +240,12 @@ object ConsentFlows {
                 uuid = UniqueIdentifier(id = consentBranchUUID, externalId = consentStateUuid.externalId),
                 branchPoint = consentStateUuid,
                 attachments = attachments,
-                legalEntities = legalEntities,
+                legalEntities = context.participatingLegalEntities,
                 signatures = emptyList(),
                 parties = parties + serviceHub.myInfo.legalIdentities.first(),
-                initiatingNode = initiatingNode,
-                initiatingLegalEntity = initiatingLegalEntity,
-                branchTime = branchTime
+                initiatingNode = context.initiatingNode,
+                initiatingLegalEntity = context.initiatingLegalEntity,
+                branchTime = context.branchTime
             )
             val txBuilder = TransactionBuilder(notary)
                     .addInputState(consentStateRef)
