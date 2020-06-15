@@ -11,7 +11,7 @@ COPY --from=builder flows/build/libs/flows-0.14.0.jar /opt/nuts/cordapps/flows-0
 WORKDIR /opt/nuts
 
 HEALTHCHECK --start-period=90s --timeout=5s --interval=10s \
-    CMD netstat -an | grep 7886 > /dev/null; if [ 0 != $? ]; then exit 1; fi;
+    CMD netstat -anl | grep 7887 > /dev/null; if [ 0 != $? ]; then exit 1; fi;
 
 EXPOSE 7886 7887 7888 2222
 CMD ["java", "-jar", "/opt/nuts/corda.jar", "--network-root-truststore-password=changeit", "--log-to-console"]
