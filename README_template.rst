@@ -7,12 +7,12 @@ Discovery Consent Cordapp by the Nuts foundation for distributing Consent record
     :target: https://circleci.com/gh/nuts-foundation/nuts-consent-cordapp
     :alt: Build Status
 
-.. image:: https://readthedocs.org/projects/nuts-consent-cordapp/badge/?version=latest
-    :target: https://nuts-documentation.readthedocs.io/projects/nuts-consent-cordapp/en/latest/?badge=latest
-    :alt: Documentation Status
-
 .. image:: https://codecov.io/gh/nuts-foundation/nuts-consent-cordapp/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/nuts-foundation/nuts-consent-cordapp
+
+.. image:: https://api.codeclimate.com/v1/badges/52ce5adf2112d069397a/maintainability
+   :target: https://codeclimate.com/github/nuts-foundation/nuts-consent-cordapp/maintainability
+   :alt: Maintainability
 
 .. include:: docs/pages/development/nuts-consent-cordapp.rst
     :start-after: .. marker-for-readme

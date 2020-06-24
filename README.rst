@@ -3,16 +3,16 @@ nuts-consent-cordapp
 
 Discovery Consent Cordapp by the Nuts foundation for distributing Consent records across nodes.
 
-.. image:: https://travis-ci.org/nuts-foundation/nuts-consent-cordapp.svg?branch=master
-    :target: https://travis-ci.org/nuts-foundation/nuts-consent-cordapp
+.. image:: https://circleci.com/gh/nuts-foundation/nuts-consent-cordapp.svg?style=svg
+    :target: https://circleci.com/gh/nuts-foundation/nuts-consent-cordapp
     :alt: Build Status
-
-.. image:: https://readthedocs.org/projects/nuts-consent-cordapp/badge/?version=latest
-    :target: https://nuts-documentation.readthedocs.io/projects/nuts-consent-cordapp/en/latest/?badge=latest
-    :alt: Documentation Status
 
 .. image:: https://codecov.io/gh/nuts-foundation/nuts-consent-cordapp/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/nuts-foundation/nuts-consent-cordapp
+
+.. image:: https://api.codeclimate.com/v1/badges/52ce5adf2112d069397a/maintainability
+   :target: https://codeclimate.com/github/nuts-foundation/nuts-consent-cordapp/maintainability
+   :alt: Maintainability
 
 The consent cordapp is written in Kotlin and can be build by Gradle.
 
@@ -91,7 +91,7 @@ You can release libraries through:
 
 Then go to https://oss.sonatype.org and *close* and *release* the libs. More info can be found on https://central.sonatype.org/pages/releasing-the-deployment.html.
 
-.. notes::
+.. note::
 
     It seems signing require Oracles JVM! So openjdk won't work.
 
@@ -102,7 +102,7 @@ The basic node.conf inside the Cordap base directory should look similar like th
 
 .. code-block:: yaml
 
-    myLegalName="O=Nuts,C=NL,L=Groenlo,CN=nuts_corda_development_dahmer"
+    myLegalName="O=Nuts,C=NL,L=Groenlo,CN=nuts_corda_development"
     emailAddress="info@nuts.nl"
     devMode=false
     devModeOptions {
@@ -118,10 +118,55 @@ The basic node.conf inside the Cordap base directory should look similar like th
         adminAddress="localhost:11043"
     }
     rpcUsers=[]
+    custom = {
+        jvmArgs: [ "-Xmx1G", "-XX:+UseG1GC" ]
+    }
 
 Both the ``doormanURL`` and ``networkMapURL`` must point to the location where *Nuts Discovery* is running. The ``p2pAddress`` is the endpoint that must be exposed to the outside world and which is added to the *Nuts registry*. The ``rpcSettings`` property is used for exposing the rpc endoint used by *Nuts consent bridge*.
 
 The ``myLegalName`` is the identity of the node and must be unique. It follows the x500 name convention. This is also the identiy that is added to the *Nuts registry* consent endpoint.
+
+Since Corda 4.4 memory consumption has changed, the default 512m is no longer enough. The `custom` section is therefore mandatory:
+
+.. code-block:: yaml
+
+    custom = {
+        jvmArgs: [ "-Xmx1G", "-XX:+UseG1GC" ]
+    }
+
+Database & Docker
+*****************
+
+By default Corda places the DB in the `baseDirectory` which, by default, is inside a docker container. This can be avoided by mounting the entire `baseDirectory` but this also means the cordapps and `corda.jar` have to be mounted as well. The Nuts cordapp image has these inside the image. Having to download them again is extra work, that's just annoying. Luckily it's also possible to put the DB in a different location. The default DB configuration is below:
+
+.. code-block:: yaml
+
+    dataSourceProperties = {
+        dataSourceClassName = org.h2.jdbcx.JdbcDataSource
+        dataSource.url = "jdbc:h2:file:"${baseDirectory}"/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
+        dataSource.user = sa
+        dataSource.password = ""
+    }
+
+By putting the DB in a sub directory it'll be easier to mount. For example changing above config to:
+
+.. code-block:: yaml
+
+    dataSourceProperties = {
+        dataSourceClassName = org.h2.jdbcx.JdbcDataSource
+        dataSource.url = "jdbc:h2:file:"${baseDirectory}"/data/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
+        dataSource.user = sa
+        dataSource.password = ""
+    }
+
+places the DB in a `/data` subdirectory. Which can then be mounted with:
+
+.. code-block:: shell
+
+    docker run \
+        -v {{data_dir}}:/opt/nuts/data \
+        -d \
+        nuts-consent-cordapp:latest-dev
 
 Signed libraries
 ****************
