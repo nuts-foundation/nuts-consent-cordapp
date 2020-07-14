@@ -12,7 +12,7 @@ image:
 service:
   type: LoadBalancer
   # GCloud IP
-  loadBalancerIP: 35.204.66.35
+  loadBalancerIP: 35.204.85.180
   port: 7886
 
 ingress:
