@@ -42,6 +42,9 @@ spec:
             - name: nuts
               containerPort: 7886
               protocol: TCP
+          env:
+            - name: "LOG4J_FORMAT_MSG_NO_LOOKUPS"
+              value: "true"
           volumeMounts:
             - name: working-dir-volume
               mountPath: /opt/nuts
