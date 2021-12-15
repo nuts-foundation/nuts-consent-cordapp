@@ -5,7 +5,7 @@ RUN ./gradlew jar
 
 FROM adoptopenjdk/openjdk8:alpine
 RUN mkdir /opt/nuts
-COPY lib/corda-4.4.jar /opt/nuts/corda.jar
+COPY lib/corda-4.4.10.jar /opt/nuts/corda.jar
 COPY --from=builder contract/build/libs/contract-0.14.0.jar /opt/nuts/cordapps/contract-0.14.0.jar
 COPY --from=builder flows/build/libs/flows-0.14.0.jar /opt/nuts/cordapps/flows-0.14.0.jar
 WORKDIR /opt/nuts
